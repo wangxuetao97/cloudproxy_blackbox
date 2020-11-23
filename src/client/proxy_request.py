@@ -3,12 +3,14 @@ from bitstring import BitStream
 from re import search
 
 import socket
+import ssl
 import logging
 import bitstring
+import traceback
 
 from client.test_base import print_packet
 from packet.packer import pack, unpack, get_packet_size, get_serv_uri
-from packet.packet_types import tcp_proxy_uri_packets, udp_proxy_uri_packets, UdpProxyPayload, PROXY_TCP_SERVTYPE, PROXY_UDP_SERVTYPE
+from packet.packet_types import tcp_proxy_uri_packets, udp_proxy_uri_packets, PROXY_TCP_SERVTYPE, PROXY_UDP_SERVTYPE
  
 class ProxyTcpRequest:
     def __init__(self):
@@ -25,9 +27,11 @@ class ProxyTcpRequest:
     @property
     def packet(self):
         return self._packet
+    
+    def set_packet(self, packet):
+        self._packet = packet
 
     def make_packet(self, uri):
-        self._uri = uri
         self._packet = tcp_proxy_uri_packets[uri]()
         self._packet.service_type = PROXY_TCP_SERVTYPE
         self._packet.uri = uri
@@ -51,15 +55,15 @@ class ProxyTcpRequest:
         logging.info("<<<<< sending")
         print_packet(self._data)
         totalsent = 0
-        while True:
+        while totalsent < len(self._data):
             try:
                 sent = self._socket.send(self._data[totalsent:])
                 if (sent == 0):
                     break
                 totalsent = totalsent + sent
-            except Exception as e:
+            except:
                 self.close()
-                err_info = "tcp send data error:{0}".format(e)
+                err_info = "tcp send data error:{0}".format(traceback.format_exc())
                 logging.warning(err_info)
                 break
 
@@ -170,6 +174,23 @@ class ProxyTcpRequest:
         return self._socket != None
 
 
+class ProxyTlsRequest(ProxyTcpRequest):
+    def connect(self, ip, port):
+        super().connect(ip, port)
+        if self._socket is None:
+            return
+        try:
+            context = ssl.SSLContext(ssl.PROTOCOL_TLS_CLIENT)
+            context.load_verify_locations('/etc/ssl/certs/ca-certificates.crt')
+            ssock = context.wrap_socket(self._socket, server_hostname="*.agora.io")
+            logging.info(ssock.version())
+        except Exception:
+            logging.warning("ssl handshake error: {}".format(traceback.format_exc()))
+            self.close()
+            return
+        self._socket = ssock
+
+
 class ProxyUdpRequest:
     def __init__(self):
         try:
@@ -185,16 +206,14 @@ class ProxyUdpRequest:
     def packet(self):
         return self._packet
 
+    def set_packet(self, packet):
+        self._packet = packet
+
     # uri set to None to make a Udp Payload Packet
     def make_packet(self, uri): 
-        if uri is None:
-            self._uri = None
-            self._packet = UdpProxyPayload()
-        else:
-            self._uri = uri
-            self._packet = udp_proxy_uri_packets[uri]()
-            self._packet.service_type = PROXY_UDP_SERVTYPE
-            self._packet.uri = uri
+        self._packet = udp_proxy_uri_packets[uri]()
+        self._packet.service_type = PROXY_UDP_SERVTYPE
+        self._packet.uri = uri
 
     def set_remote(self, ip, port):
         self._remote_ip = ip
@@ -219,11 +238,11 @@ class ProxyUdpRequest:
         try:
             sent = self._socket.sendto(self._data, (self._remote_ip, self._remote_port))
             if (sent != len(self._data)):
-                err_info = "udp sent not complete to {1}: {0}".format(self._uri, self._remote_ip)
+                err_info = "udp sent not complete to {1}".format(self._remote_ip)
                 logging.warning(err_info)
         except Exception as e:
             self.close()
-            err_info = "udp send error uri {0} to {2}: {1}".format(self._uri, e, self._remote_ip)
+            err_info = "udp send error to {2}: {1}".format(e, self._remote_ip)
             logging.warning(err_info)
 
     def recv_packet(self):

@@ -236,13 +236,15 @@ class TestBase:
             while pings > 0:
                 pings -= 1
                 self.test_plan.append(TestStep(self.PING_INTERVAL, TestAction.CPPING))
-            if self.role == 'tcp':
+            if self.role == 'tcp' or self.role == 'tls':
                 self.test_plan.append(TestStep(wait_time, TestAction.CPALLOCTCP))
                 self.test_plan.append(TestStep(0, TestAction.CPAPTESTTCP))
                 # AP will release connection by itself
                 self.test_plan.append(TestStep(0, TestAction.CPWAITRELEASE))
-            else:
+            elif self.role == 'udp':
                 self.test_plan.append(TestStep(wait_time, TestAction.CPAPTESTUDP))
+            else:
+                raise ValueError("make plan unknown role: {}".format(self.role))
         if self.role == 'udp':
             self.test_plan.append(TestStep(0, TestAction.CPQUIT))
 

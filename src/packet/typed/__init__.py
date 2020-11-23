@@ -55,7 +55,7 @@ class RawBytes(Descriptor):
         self.__set__(instance, buffer.read('bytes'))
 
 
-__all__ = ['String', 'PacketBytes',
+__all__ = ['String', 'PacketBytes', 'RawBytes',
            'Uint8', 'Uint16', 'Uint32', 'Uint64',
            'Int8', 'Int16', 'Int32', 'Int64',
            'Map', 'Vector', 'Float'

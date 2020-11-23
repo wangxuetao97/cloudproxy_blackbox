@@ -72,9 +72,8 @@ class TestUdp(TestBase):
                     if self.link_id is None:
                         logging.warning("Skip ap test because no link id.")
                         continue
-                    self.req.make_packet(None)
                     self.last_payload = make_ap_req()
-                    self.req.packet.payload = pack(make_ap_req())[2:]
+                    self.req.set_packet(self.last_payload)
                     self.req.set_header(self.link_id, AP_SERVER_IP, AP_SERVER_UDP_PORT)
                 elif self.step.action == TestAction.CPQUIT:
                     self.req.make_packet(6)

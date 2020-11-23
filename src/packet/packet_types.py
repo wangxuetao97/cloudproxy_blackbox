@@ -99,10 +99,7 @@ class UdpProxyPing(Packet):
 class UdpProxyPong(Packet):
     ts = Uint64('ts')
     detail = Map('detail', key_type=Uint32, mapped_type=String)
-
-class UdpProxyPayload(EmptyPacket):
-    payload = RawBytes('payload')
-
+    
 class ChannelConfigPack(Packet):
     link_id = Uint16('link_id')
     detail = Map('detail', key_type=Int32, mapped_type=String)
@@ -136,7 +133,7 @@ def make_ap_req():
     req.uri = 67
     req.request_env = -1
     req.sid = ''
-    req.flag = 1
+    req.flag = 1 << 17
     req.opid = 0
     req.uid = RandomNumber32()
     req.key = RandomString()

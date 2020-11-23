@@ -98,6 +98,17 @@ def test_tcp_routine():
     tn.start_test()
     tn.check_statistics()
 
+def test_tls_routine():
+    tn = TestTcp('127.0.0.1', tls=True)
+    tn.test_plan.append(TestStep(action=TestAction.CPJOIN))
+    tn.test_plan.append(TestStep(action=TestAction.CPALLOCTCP, skip_step=2))
+    tn.test_plan.append(TestStep(action=TestAction.CPAPTESTTCP, wait=0))
+    tn.test_plan.append(TestStep(action=TestAction.CPWAITRELEASE, wait=0))
+    tn.test_plan.append(TestStep(action=TestAction.CPPING, wait=0))
+    tn.find_server_ip()
+    tn.start_test()
+    tn.check_statistics()
+    
 def test_udp_routine():
     tn = TestUdp('127.0.0.1')
     tn.test_plan.append(TestStep(action=TestAction.CPJOIN))

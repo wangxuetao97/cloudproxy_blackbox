@@ -80,10 +80,14 @@ def main():
         sys.exit(1)
     hosts = config_json["domain"]
     for host in hosts:
-        if blackbox_role == 'tcp':
-            host_test_map[host] = TestTcp(host)
-        else:
+        if blackbox_role == 'udp':
             host_test_map[host] = TestUdp(host)
+        elif blackbox_role == 'tcp':
+            host_test_map[host] = TestTcp(host)
+        elif blackbox_role == 'tls':
+            host_test_map[host] = TestTcp(host, tls=True)
+        else:
+            raise ValueError("main: unknown role: {}".format(blackbox_role))
     jobs = []
     for _, test in host_test_map.items():
         job = Job(interval=timedelta(seconds=BLACKBOX_INTERVAL), func=test.run, stop_func=test.stop)

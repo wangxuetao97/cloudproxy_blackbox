@@ -7,21 +7,21 @@ import time
 
 from base.rand import RandomNumber32, RandomNumber64, RandomString
 from client.test_base import TestBase, TestAction, TestStep, TestError, agolet_report, print_packet
-from client.proxy_request import ProxyTcpRequest
+from client.proxy_request import ProxyTcpRequest, ProxyTlsRequest
 from packet.packer import pack, unpack, get_packet_size, get_serv_uri
 from packet.packet_types import tcp_proxy_uri_packets, voc_uri_packet, make_ap_req, check_ap_response, VOC_SERVTYPE, PROXY_TCP_SERVTYPE
 
 # TODO fill port
 CLOUDPROXY_TCP_PORT = 50001
-CLOUDPROXY_UDP_PORT = 8001
+CLOUDPROXY_TLS_PORT = 50002
 AP_SERVER_IP = '192.168.99.36'
 AP_SERVER_TCP_PORT = 25000
 AP_SERVER_UDP_PORT = 8000
 MAX_RETRY_COUNT = 1
 
 class TestTcp(TestBase):
-    def __init__(self, hostname):
-        super().__init__('tcp', hostname)
+    def __init__(self, hostname, tls=False):
+        super().__init__('tcp' if tls == False else 'tls', hostname)
         self.tcp_link_ids = []
         self.udp_link_ids = []
         self.req = None
@@ -40,8 +40,14 @@ class TestTcp(TestBase):
     
     def start_test(self):
         logging.info("Test start")
-        self.req = ProxyTcpRequest()
-        self.req.connect(self.server_ip, CLOUDPROXY_TCP_PORT)
+        if self.role == 'tcp':
+            self.req = ProxyTcpRequest()
+            self.req.connect(self.server_ip, CLOUDPROXY_TCP_PORT)
+        elif self.role == 'tls':
+            self.req = ProxyTlsRequest()
+            self.req.connect(self.server_ip, CLOUDPROXY_TLS_PORT)
+        else:
+            raise ValueError('TestTcp: unknown role: {}'.format(self.role))
         if not self.req.valid_socket():
             # connect failure handle
             self.record_err(TestError.CONNECT_PROXY_FAILED)
