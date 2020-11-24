@@ -26,6 +26,7 @@ class String(Descriptor):
         self.__set__(instance, res)
 
 
+# equal to 'vector<uint8_t>'
 @_typed(bytes)
 class PacketBytes(Descriptor):
     def get_length(self, instance):

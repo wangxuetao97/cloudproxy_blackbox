@@ -1,3 +1,5 @@
+from bitstring import BitStream
+
 """
 Descriptor resembles C type.
 Descriptors should be static class members.
@@ -9,16 +11,42 @@ class Descriptor:
     """
     Base class which all injectors will injected into
     """
-
     def __init__(self, name: str, **args):
         self.name = name
-
         for key, value in args.items():
             setattr(self, key, value)
 
     # set to own member without overwrite itself 
     def __set__(self, instance, value):
         instance.__dict__[self.name] = value
+
+
+# generate descriptor from sub-packet value type
+def _descript(value_type: type, cls=None):
+    if cls is None:
+        return lambda cls: _descript(value_type, cls)
+    def get_length(self, instance):
+        val_obj = instance.__dict__[self.name]
+        res = 0
+        for attr in val_obj._order():
+            res += getattr(value_type, attr).get_length(val_obj)
+        return res
+    def get_bitstring(self, instance):
+        val_obj = instance.__dict__[self.name]
+        res = BitStream()
+        for attr in val_obj._order():
+            res += getattr(value_type, attr).get_bitstring(val_obj)
+        return res
+    def read_bitstring(self, buf: BitStream, instance):
+        self.__set__(instance, value_type())
+        val_obj = instance.__dict__[self.name]
+        for attr in val_obj._order():
+            getattr(value_type, attr).read_bitstring(buf, val_obj)
+    cls = _typed(value_type, cls)
+    cls.get_length = get_length
+    cls.get_bitstring = get_bitstring
+    cls.read_bitstring = read_bitstring
+    return cls
 
 
 def _typed(expected_type: type, cls=None):
@@ -40,7 +68,7 @@ def _typed(expected_type: type, cls=None):
 
         super_set(self, instance, value)
 
-    cls.__set__ == __set__
+    cls.__set__ =  __set__
     return cls
 
 

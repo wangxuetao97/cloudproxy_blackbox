@@ -8,19 +8,18 @@ import time
 
 from base.rand import RandomNumber32, RandomNumber64, RandomString
 from client.test_base import TestBase, TestAction, TestStep, TestError, agolet_report, print_packet
-from client.proxy_request import ProxyUdpRequest
+from client.proxy_udp_request import ProxyUdpRequest
 from packet.packer import pack, unpack, get_packet_size, get_serv_uri
-from packet.packet_types import udp_proxy_uri_packets, voc_uri_packet, make_ap_req, check_ap_response, VOC_SERVTYPE, PROXY_UDP_SERVTYPE 
+from packet.packet_types import udp_proxy_uri_packets, voc_uri_packet, make_ap_proxy_req, read_ap_proxy_res, VOC_SERVTYPE, PROXY_UDP_SERVTYPE 
 
-# TODO fill port
-CLOUDPROXY_UDP_PORT = 8001
-AP_SERVER_IP = '192.168.99.36'
-AP_SERVER_UDP_PORT = 8000
 MAX_RETRY_COUNT = 3
 
 class TestUdp(TestBase):
-    def __init__(self, hostname):
-        super().__init__('udp', hostname)
+    def __init__(self, cp_hostname, cp_port, ap_ip, ap_port):
+        super().__init__('udp', cp_hostname)
+        self.cp_port = cp_port
+        self.ap_ip = ap_ip
+        self.ap_port = ap_port
         self.link_id = None
         self.req = None
         self.last_ping_time = None
@@ -29,8 +28,6 @@ class TestUdp(TestBase):
 
     def run(self):
         self.err_req_stat.reset()
-        if not self.find_server_ip():
-            return
         self.make_plan()
         self.print_plan()
         self.start_test()
@@ -42,7 +39,7 @@ class TestUdp(TestBase):
         if not self.req.valid_socket():
             self.record_err(TestError.CONNECT_PROXY_FAILED)
             return
-        self.req.set_remote(self.server_ip, CLOUDPROXY_UDP_PORT)
+        self.req.set_remote(self.server_ip, self.cp_port)
         
         idx = 0
         try:
@@ -72,9 +69,9 @@ class TestUdp(TestBase):
                     if self.link_id is None:
                         logging.warning("Skip ap test because no link id.")
                         continue
-                    self.last_payload = make_ap_req()
+                    self.last_payload = make_ap_proxy_req(self.role)
                     self.req.set_packet(self.last_payload)
-                    self.req.set_header(self.link_id, AP_SERVER_IP, AP_SERVER_UDP_PORT)
+                    self.req.set_header(self.link_id, self.ap_ip, self.ap_port)
                 elif self.step.action == TestAction.CPQUIT:
                     self.req.make_packet(6)
                     self.req.set_header(self.link_id, '127.0.0.1', 1)
@@ -140,7 +137,6 @@ class TestUdp(TestBase):
             if not (uri in udp_proxy_uri_packets):
                 self.record_err(TestError.PACKET_CORRUPTED)
                 return -1
-            logging.info("packet bytes: {}".format(packet_bytes))
             packet = unpack(BitStream(packet_bytes), udp_proxy_uri_packets[uri])
             if packet is None:
                 self.record_err(TestError.PACKET_CORRUPTED)
@@ -182,14 +178,15 @@ class TestUdp(TestBase):
         
     def check_ap_payload(self, payload_bytes):
         serv, uri = get_serv_uri(payload_bytes)
-        if serv != VOC_SERVTYPE or uri != 68:
+        if serv != VOC_SERVTYPE or uri != 75:
             self.record_err(TestError.AP_ERROR)
             return 0
-        apk = unpack(BitStream(payload_bytes), voc_uri_packet[68])
+        apk = unpack(BitStream(payload_bytes), voc_uri_packet[uri])
         if apk is None:
             self.record_err(TestError.UDP_PAYLOAD_CORRUPTED)
             return -1
-        if not check_ap_response(self.last_payload, apk):
+        eip, eport = read_ap_proxy_res(apk)
+        if eip is None or eport is None:
             self.record_err(TestError.AP_ERROR)
         return 0
 

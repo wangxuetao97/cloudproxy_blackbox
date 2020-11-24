@@ -1,5 +1,5 @@
 from base.rand import RandomNumber32, RandomNumber64, RandomString
-from client.proxy_request import ProxyTcpRequest
+from client.proxy_tcp_request import ProxyTcpRequest
 from client.test_base import print_packet, TestStep, TestAction
 from client.test_tcp import TestTcp
 from client.test_udp import TestUdp
@@ -79,11 +79,11 @@ def test_send_payload():
 
 
 def test_plan():
-    tn = TestTcp('127.0.0.1')
+    tn = TestTcp('127.0.0.1', 50001, '192.168.99.36', 9700, 8000)
     tn.run()
 
 def test_tcp_routine():
-    tn = TestTcp('127.0.0.1')
+    tn = TestTcp('127.0.0.1', 50001, '192.168.99.36', 9700, 8000)
     tn.test_plan.append(TestStep(action=TestAction.CPJOIN))
     tn.test_plan.append(TestStep(action=TestAction.CPALLOCTCP, skip_step=2))
     tn.test_plan.append(TestStep(action=TestAction.CPAPTESTTCP, wait=0))
@@ -94,26 +94,23 @@ def test_tcp_routine():
     tn.test_plan.append(TestStep(action=TestAction.CPALLOCUDP, skip_step=1))
     tn.test_plan.append(TestStep(action=TestAction.CPAPTESTUDP, wait=0))
     tn.test_plan.append(TestStep(action=TestAction.CPPING, wait=0))
-    tn.find_server_ip()
     tn.start_test()
     tn.check_statistics()
 
 def test_tls_routine():
-    tn = TestTcp('127.0.0.1', tls=True)
+    tn = TestTcp('127.0.0.1', 50002, '192.168.99.36', 9700, 8000, tls=True)
     tn.test_plan.append(TestStep(action=TestAction.CPJOIN))
     tn.test_plan.append(TestStep(action=TestAction.CPALLOCTCP, skip_step=2))
     tn.test_plan.append(TestStep(action=TestAction.CPAPTESTTCP, wait=0))
     tn.test_plan.append(TestStep(action=TestAction.CPWAITRELEASE, wait=0))
     tn.test_plan.append(TestStep(action=TestAction.CPPING, wait=0))
-    tn.find_server_ip()
     tn.start_test()
     tn.check_statistics()
     
 def test_udp_routine():
-    tn = TestUdp('127.0.0.1')
+    tn = TestUdp('127.0.0.1', 8001, '192.168.99.36', 8000)
     tn.test_plan.append(TestStep(action=TestAction.CPJOIN))
     tn.test_plan.append(TestStep(action=TestAction.CPAPTESTUDP))
     tn.test_plan.append(TestStep(action=TestAction.CPQUIT))
-    tn.find_server_ip()
     tn.start_test()
     tn.check_statistics()

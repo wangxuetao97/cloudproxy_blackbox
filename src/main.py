@@ -2,6 +2,8 @@ from datetime import timedelta
 
 from client.test_tcp import TestTcp
 from client.test_udp import TestUdp
+from client.ap_fetch_settings import ap_fetch_cp
+from client.test_base import nslookup
 
 import json
 import logging
@@ -78,16 +80,25 @@ def main():
     if config_json is None:
         logging.warning("Load config failed. Exit now.")
         sys.exit(1)
-    hosts = config_json["domain"]
+    hosts = config_json["ap_hostnames"]
     for host in hosts:
+        aip = nslookup(host)
+        if aip is None:
+            logging.warning("Ap nslookup failed for: {}".format(host))
+            sys.exit(1)
+        eip, eport = ap_fetch_cp(blackbox_role, aip, 9700)
+        if eip is None or eport is None:
+            logging.warning("Ap fetch cloudproxy edge failed.")
+            sys.exit(1)
         if blackbox_role == 'udp':
-            host_test_map[host] = TestUdp(host)
+            host_test_map[host] = TestUdp(eip, eport, aip, 8000)
         elif blackbox_role == 'tcp':
-            host_test_map[host] = TestTcp(host)
+            host_test_map[host] = TestTcp(eip, eport, aip, 9700, 8000)
         elif blackbox_role == 'tls':
-            host_test_map[host] = TestTcp(host, tls=True)
+            host_test_map[host] = TestTcp(eip, eport, aip, 9700, 8000, tls=True)
         else:
             raise ValueError("main: unknown role: {}".format(blackbox_role))
+
     jobs = []
     for _, test in host_test_map.items():
         job = Job(interval=timedelta(seconds=BLACKBOX_INTERVAL), func=test.run, stop_func=test.stop)

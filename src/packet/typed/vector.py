@@ -8,13 +8,12 @@ def _vector(cls):
     class TyppedVector(list):
         def __init__(self, value_type):
             self._value_type = value_type
-
             super().__init__()
 
         def _value_check(self, value):
+            # define a packet-like class for checking vector items
             class TempChecker:
                 checker = self._value_type('checker')
-
             checker = TempChecker()
             checker.checker = value
 
@@ -28,10 +27,8 @@ def _vector(cls):
 
     def __set__(self, instance, vec_value):
         v = TyppedVector(self.value_type)
-
         for value in vec_value:
             v.append(value)
-
         super_set(self, instance, v)
 
     cls.__set__ = __set__
@@ -68,17 +65,12 @@ class Vector(Descriptor):
         def _key_bit(self):
             class TempChecker:
                 checker = self.value_type('checker')
-
             checker = TempChecker()
             TempChecker.checker.read_bitstring(buffer, checker)
             return checker.checker
-
         size = buffer.read('uintle:16')
-
         self.__set__(instance, [])
-
-        for i in range(size):
+        for _ in range(size):
             kv = _key_bit(self)
-
             instance.__dict__[self.name].append(kv)
 

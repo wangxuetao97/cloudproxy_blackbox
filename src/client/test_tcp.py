@@ -7,21 +7,20 @@ import time
 
 from base.rand import RandomNumber32, RandomNumber64, RandomString
 from client.test_base import TestBase, TestAction, TestStep, TestError, agolet_report, print_packet
-from client.proxy_request import ProxyTcpRequest, ProxyTlsRequest
+from client.proxy_tcp_request import ProxyTcpRequest
+from client.proxy_tls_request import ProxyTlsRequest
 from packet.packer import pack, unpack, get_packet_size, get_serv_uri
-from packet.packet_types import tcp_proxy_uri_packets, voc_uri_packet, make_ap_req, check_ap_response, VOC_SERVTYPE, PROXY_TCP_SERVTYPE
+from packet.packet_types import tcp_proxy_uri_packets, voc_uri_packet, make_ap_proxy_req, read_ap_proxy_res, VOC_SERVTYPE, PROXY_TCP_SERVTYPE
 
-# TODO fill port
-CLOUDPROXY_TCP_PORT = 50001
-CLOUDPROXY_TLS_PORT = 50002
-AP_SERVER_IP = '192.168.99.36'
-AP_SERVER_TCP_PORT = 25000
-AP_SERVER_UDP_PORT = 8000
 MAX_RETRY_COUNT = 1
 
 class TestTcp(TestBase):
-    def __init__(self, hostname, tls=False):
+    def __init__(self, hostname, cp_port, ap_ip, ap_tcp_port, ap_udp_port, tls=False):
         super().__init__('tcp' if tls == False else 'tls', hostname)
+        self.cp_port = cp_port
+        self.ap_ip = ap_ip
+        self.ap_tcp_port = ap_tcp_port
+        self.ap_udp_port = ap_udp_port
         self.tcp_link_ids = []
         self.udp_link_ids = []
         self.req = None
@@ -31,8 +30,6 @@ class TestTcp(TestBase):
 
     def run(self):
         self.err_req_stat.reset()
-        if not self.find_server_ip():
-            return
         self.make_plan()
         self.print_plan()
         self.start_test()
@@ -42,12 +39,11 @@ class TestTcp(TestBase):
         logging.info("Test start")
         if self.role == 'tcp':
             self.req = ProxyTcpRequest()
-            self.req.connect(self.server_ip, CLOUDPROXY_TCP_PORT)
         elif self.role == 'tls':
             self.req = ProxyTlsRequest()
-            self.req.connect(self.server_ip, CLOUDPROXY_TLS_PORT)
         else:
             raise ValueError('TestTcp: unknown role: {}'.format(self.role))
+        self.req.connect(self.server_ip, self.cp_port)
         if not self.req.valid_socket():
             # connect failure handle
             self.record_err(TestError.CONNECT_PROXY_FAILED)
@@ -73,8 +69,8 @@ class TestTcp(TestBase):
                     self.req.packet.request_id = 1
                     if self.step.action == TestAction.CPALLOCTCP:
                         self.req.packet.channel_type = 1
-                        self.req.packet.ip = int.from_bytes(inet_pton(AF_INET, AP_SERVER_IP), 'big')
-                        self.req.packet.port = AP_SERVER_TCP_PORT
+                        self.req.packet.ip = int.from_bytes(inet_pton(AF_INET, self.ap_ip), 'big')
+                        self.req.packet.port = self.ap_tcp_port
                     else:
                         self.req.packet.channel_type = 2
                 elif self.step.action == TestAction.CPAPTESTTCP:
@@ -83,17 +79,17 @@ class TestTcp(TestBase):
                         continue
                     self.req.make_packet(8)
                     self.req.packet.link_id = self.tcp_link_ids[-1]
-                    self.last_payload = make_ap_req()
+                    self.last_payload = make_ap_proxy_req(self.role)
                     self.req.packet.payload = pack(self.last_payload)
                 elif self.step.action == TestAction.CPAPTESTUDP:
                     if len(self.udp_link_ids) == 0:
                         logging.warning("Skip ap test because no active proxy channel.")
                         continue
                     self.req.make_packet(7)
-                    self.req.packet.ip = int.from_bytes(inet_pton(AF_INET, AP_SERVER_IP), 'big')
-                    self.req.packet.port = AP_SERVER_UDP_PORT
+                    self.req.packet.ip = int.from_bytes(inet_pton(AF_INET, self.ap_ip), 'big')
+                    self.req.packet.port = self.ap_udp_port
                     self.req.packet.link_id = self.udp_link_ids[-1]
-                    self.last_payload = make_ap_req()
+                    self.last_payload = make_ap_proxy_req(self.role)
                     self.req.packet.payload = pack(self.last_payload)
                 elif self.step.action == TestAction.CPRELEASETCP:
                     if len(self.tcp_link_ids) == 0:
@@ -276,13 +272,14 @@ class TestTcp(TestBase):
 
     def check_ap_payload(self, payload_bytes):
         pay_service_id, pay_uri = get_serv_uri(payload_bytes)
-        if pay_service_id != VOC_SERVTYPE or pay_uri != 68:
+        if pay_service_id != VOC_SERVTYPE or pay_uri != 75:
             self.record_err(TestError.AP_ERROR)
             return 0
-        payload_packet = unpack(BitStream(payload_bytes), voc_uri_packet[68])
+        payload_packet = unpack(BitStream(payload_bytes), voc_uri_packet[pay_uri])
         if payload_packet is None:
             self.record_err(TestError.TCP_PAYLOAD_CORRUPTED)
             return -1
-        if not check_ap_response(self.last_payload, payload_packet):
+        eip, eport = read_ap_proxy_res(payload_packet)
+        if eip is None or eport is None:
             self.record_err(TestError.AP_ERROR)
         return 0

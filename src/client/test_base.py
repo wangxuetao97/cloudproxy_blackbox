@@ -169,7 +169,7 @@ error_code_counts = {
 class TestBase:
     def __init__(self, role, hostname):
         self.role = role
-        self.url = hostname 
+        self.server_ip = hostname 
         self.stop_event = threading.Event()
         self.local_ip = local_ip()
         if self.local_ip is None:
@@ -177,7 +177,6 @@ class TestBase:
         voc_res = voc_join('/cloudproxy_blackbox_{}'.format(self.role))
         if voc_res is not None:
             self.idc = voc_res.config['idc']
-        self.server_ip = None # filled in run() as part of the test
         self.test_plan: List[TestStep] = []
         self.err_req_stat = Statistics() # error statistics on requests
         self.err_code_cnts = error_code_counts # error counts on errcodes. it is a global variable
@@ -207,21 +206,11 @@ class TestBase:
     def agolet_burst_msg(self, time_delta, remote, value) -> str:
         return "Cloudproxy blackbox role <{0}> error burst in {4} min, error_counts: {1}, "\
                 "from {2} to {3}".format(self.role, value, self.local_ip, remote, int(time_delta.total_seconds() / 60))
-    
-    def agolet_nslookup_msg(self) -> str:
-        return "Cloudproxy blackbox nslookup error from {0} to {1}".format(self.local_ip, self.url)
 
     def agolet_success_rate_msg(self, value) -> str:
         return "Cloudproxy blackbox role <{0}> success rate warning: {1} from {3} to {2}"\
                 .format(self.role, value, self.server_ip, self.local_ip)
-    
-    def find_server_ip(self):
-        self.server_ip = nslookup(self.url)
-        if self.server_ip is None:
-            agolet_report(self.agolet_nslookup_msg())
-            return False
-        return True
-    
+
     # TODO now TCP channel only
     PING_INTERVAL = 5
     def make_plan(self):

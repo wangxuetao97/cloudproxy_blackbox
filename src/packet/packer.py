@@ -16,11 +16,14 @@ def pack(pkt: Packet) -> bytes:
     length = 0
     for attr in pkt._order():
         if isinstance(getattr(pkt.__class__, attr), Descriptor):
+            # descriptor needs one declaration as class member
             bit = getattr(pkt.__class__, attr).get_bitstring(pkt)
             vec.append(bit)
             length += len(bit) / 8
         else:
-            sub_packet = getattr(pkt.__class__, attr)
+            # non-descriptor sub-packet needs two declarations as class member and self member.
+            # their packed result will not have a length header.
+            sub_packet = pkt.__dict__[attr]
             for sub_attr in sub_packet._order():
                 sub_bit = getattr(sub_packet.__class__, sub_attr).get_bitstring(sub_packet)
                 vec.append(sub_bit)
