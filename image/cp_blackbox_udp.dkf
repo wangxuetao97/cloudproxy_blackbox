@@ -1,0 +1,9 @@
+FROM ubuntu:18.04
+
+RUN apt update && apt install -y python3 python3-pip
+RUN pip3 install bitstring influxdb
+
+RUN mkdir -p /home/devops && mkdir -p /data/log/agora
+ADD ./src /home/devops/src
+WORKDIR /home/devops/src
+CMD python3 main.py -r udp

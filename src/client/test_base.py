@@ -288,8 +288,7 @@ class TestBase:
         }
         # move and clear
         for key, value in self.err_code_cnts.items():
-            if value != 0:
-                fields[key.name] = value
+            fields[key.name.lower()] = value
         Collectors.cp_collector.put(fields)
         for key in self.err_code_cnts:
             self.err_code_cnts[key] = 0
@@ -315,6 +314,7 @@ class TestBase:
             logging.info("write_point: {}".format(json_body))
             client = influxdb_client()
             client.write_points(json_body)
+            logging.info("point written")
         except:
             err_info = "influxdb write error: {}".format(traceback.format_exc())
             logging.warning(err_info)

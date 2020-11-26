@@ -14,6 +14,7 @@ import signal
 import sys
 import threading
 import time
+import traceback
 
 BLACKBOX_CONFIG="native_config.json"
 BLACKBOX_VERSION = "20201116"
@@ -51,8 +52,8 @@ class Job(threading.Thread):
         self.stop_func = stop_func
 
     def stop(self):
-        self.stopped.set()
         self.stop_func()
+        self.stopped.set()
         self.join()
     
     def loop_part(self):
@@ -89,7 +90,7 @@ def main():
             logging.warning(err_info)
             print(err_info)
             sys.exit(1)
-        eip, eport = ap_fetch_cp(blackbox_role, aip, 9700)
+        eip, eport = ap_fetch_cp(blackbox_role, aip, 25000)
         if eip is None or eport is None:
             err_info = "Ap fetch cloudproxy edge failed."
             logging.warning(err_info)
@@ -98,9 +99,9 @@ def main():
         if blackbox_role == 'udp':
             host_test_map[host] = TestUdp(eip, eport, aip, 8000)
         elif blackbox_role == 'tcp':
-            host_test_map[host] = TestTcp(eip, eport, aip, 9700, 8000)
+            host_test_map[host] = TestTcp(eip, eport, aip, 25000, 8000)
         elif blackbox_role == 'tls':
-            host_test_map[host] = TestTcp(eip, eport, aip, 9700, 8000, tls=True)
+            host_test_map[host] = TestTcp(eip, eport, aip, 25000, 8000, tls=True)
         else:
             raise ValueError("main: unknown role: {}".format(blackbox_role))
 
@@ -136,5 +137,5 @@ if __name__ == '__main__':
                         level=logging.INFO)
     try:
         main()
-    except Exception as e:
-        logging.warning("main exit: {0}".format(e))
+    except:
+        logging.warning("main exit: {0}".format(traceback.format_exc()))
