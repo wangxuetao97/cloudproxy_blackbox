@@ -13,9 +13,11 @@ import logging
 import json
 import platform
 import threading
+import traceback
 
 from base.voc_agent import VocAgent
 from base.statistic import Statistics
+from client.quality_collector import Collectors
 from packet.packer import get_packet_size, get_serv_uri, unpack
 from packet.packet_types import Packet, service_type_map
 
@@ -35,7 +37,7 @@ def append_file(data, filename):
 # return client
 def influxdb_client():
     # TODO debug mode now
-    client = InfluxDBClient('47.100.33.37', 8086, "", "", "cloud_proxy_quality")
+    client = InfluxDBClient('10.62.0.60', 8086, "", "", "cloudproxy")
     return client
 
 # read my ip from local cache or fetch from server
@@ -177,6 +179,8 @@ class TestBase:
         voc_res = voc_join('/cloudproxy_blackbox_{}'.format(self.role))
         if voc_res is not None:
             self.idc = voc_res.config['idc']
+        else:
+            self.idc = None
         self.test_plan: List[TestStep] = []
         self.err_req_stat = Statistics() # error statistics on requests
         self.err_code_cnts = error_code_counts # error counts on errcodes. it is a global variable
@@ -264,7 +268,7 @@ class TestBase:
             logging.info("OK, no error in this run.")
         if succ < 0.7:
             agolet_report(self.agolet_success_rate_msg(succ))
-        # check ip errors every 5 minutes
+        # check ip errors every 3 minutes
         time_delta = datetime.now() - self.errcheck_ts
         if time_delta >= timedelta(minutes=3):
             for ip, cnts in self.err_ip_cnts.items():
@@ -273,5 +277,46 @@ class TestBase:
             self.err_ip_cnts.clear()
             self.errcheck_ts = datetime.now()
         # report quality to influxdb
-        
+        self.put_influxdb()
+        self.report_influxdb()
 
+    def put_influxdb(self):
+        fields = {
+            "timeout_cnt": self.err_req_stat.timeout_cnt,
+            "err_cnt": self.err_req_stat.err_cnt,
+            "total_cnt": self.err_req_stat.total_cnt,
+        }
+        # move and clear
+        for key, value in self.err_code_cnts.items():
+            if value != 0:
+                fields[key.name] = value
+        Collectors.cp_collector.put(fields)
+        for key in self.err_code_cnts:
+            self.err_code_cnts[key] = 0
+
+    def report_influxdb(self):
+        cp_coll = Collectors.cp_collector
+        if not cp_coll.ready():
+            return
+        try:
+            json_body = [
+                {
+                    "measurement": "cloudproxy_quality",
+                    "tags": {
+                        "local_ip": self.local_ip,
+                        "idc": self.idc,
+                    },
+                    "fields": {
+                        "client_type": self.role
+                    }
+                }
+            ]
+            json_body[0]["fields"] = {**json_body[0]["fields"], **cp_coll.move()}
+            logging.info("write_point: {}".format(json_body))
+            client = influxdb_client()
+            client.write_points(json_body)
+        except:
+            err_info = "influxdb write error: {}".format(traceback.format_exc())
+            logging.warning(err_info)
+        # influxdb http client doesn't need close
+        

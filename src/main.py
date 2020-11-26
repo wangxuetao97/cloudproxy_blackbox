@@ -4,6 +4,7 @@ from client.test_tcp import TestTcp
 from client.test_udp import TestUdp
 from client.ap_fetch_settings import ap_fetch_cp
 from client.test_base import nslookup
+from client.quality_collector import Collectors
 
 import json
 import logging
@@ -84,11 +85,15 @@ def main():
     for host in hosts:
         aip = nslookup(host)
         if aip is None:
-            logging.warning("Ap nslookup failed for: {}".format(host))
+            err_info = "Ap nslookup failed for: {}".format(host)
+            logging.warning(err_info)
+            print(err_info)
             sys.exit(1)
         eip, eport = ap_fetch_cp(blackbox_role, aip, 9700)
         if eip is None or eport is None:
-            logging.warning("Ap fetch cloudproxy edge failed.")
+            err_info = "Ap fetch cloudproxy edge failed."
+            logging.warning(err_info)
+            print(err_info)
             sys.exit(1)
         if blackbox_role == 'udp':
             host_test_map[host] = TestUdp(eip, eport, aip, 8000)
@@ -104,6 +109,7 @@ def main():
         job = Job(interval=timedelta(seconds=BLACKBOX_INTERVAL), func=test.run, stop_func=test.stop)
         job.start()
         jobs.append(job)
+    Collectors.cp_collector.set_count(len(jobs))
     try:
         while True:
             time.sleep(1)
