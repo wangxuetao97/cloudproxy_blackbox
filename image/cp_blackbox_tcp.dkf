@@ -6,4 +6,4 @@ RUN pip3 install bitstring influxdb
 RUN mkdir -p /home/devops && mkdir -p /data/log/agora
 ADD ./src /home/devops/src
 WORKDIR /home/devops/src
-CMD python3 main.py -r tcp
+CMD ./docker_cmd.sh tcp
