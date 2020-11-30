@@ -25,6 +25,7 @@ class QualityCollector:
     def move(self):
         tmp = self.map
         self.map = {}
+        self.got = 0
         return tmp
 
 class Collectors:

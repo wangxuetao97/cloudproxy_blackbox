@@ -185,8 +185,8 @@ class TestUdp(TestBase):
         if apk is None:
             self.record_err(TestError.UDP_PAYLOAD_CORRUPTED)
             return -1
-        eip, eport = read_ap_proxy_res(apk)
-        if eip is None or eport is None:
+        addrs = read_ap_proxy_res(apk)
+        if len(addrs) == 0:
             self.record_err(TestError.AP_ERROR)
         return 0
 

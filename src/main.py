@@ -90,20 +90,23 @@ def main():
             logging.warning(err_info)
             print(err_info)
             sys.exit(1)
-        eip, eport = ap_fetch_cp(blackbox_role, aip, 25000)
-        if eip is None or eport is None:
+        addrs = ap_fetch_cp(blackbox_role, aip, 25000)
+        if len(addrs) == 0:
             err_info = "Ap fetch cloudproxy edge failed."
             logging.warning(err_info)
             print(err_info)
             sys.exit(1)
-        if blackbox_role == 'udp':
-            host_test_map[host] = TestUdp(eip, eport, aip, 8000)
-        elif blackbox_role == 'tcp':
-            host_test_map[host] = TestTcp(eip, eport, aip, 25000, 8000)
-        elif blackbox_role == 'tls':
-            host_test_map[host] = TestTcp(eip, eport, aip, 25000, 8000, tls=True)
-        else:
-            raise ValueError("main: unknown role: {}".format(blackbox_role))
+        for cp_addr in addrs:
+            eip = cp_addr["ip"]
+            eport = cp_addr["port"]
+            if blackbox_role == 'udp':
+                host_test_map[host] = TestUdp(eip, eport, aip, 8000)
+            elif blackbox_role == 'tcp':
+                host_test_map[host] = TestTcp(eip, eport, aip, 25000, 8000)
+            elif blackbox_role == 'tls':
+                host_test_map[host] = TestTcp(eip, eport, aip, 25000, 8000, tls=True)
+            else:
+                raise ValueError("main: unknown role: {}".format(blackbox_role))
 
     jobs = []
     for _, test in host_test_map.items():

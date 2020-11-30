@@ -1,7 +1,8 @@
 #!/bin/bash
 
-./build_image.sh -t
-./build_image.sh -b
+proj_dir=$(git rev-parse --show-toplevel)
+"$proj_dir"/image/build_image.sh -t
+"$proj_dir"/image/build_image.sh -b
 
 # $1 is role
 function get_image_name {

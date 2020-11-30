@@ -250,19 +250,23 @@ def read_ap_proxy_res(res: GenericResponse):
     from socket import inet_ntop, ntohs, AF_INET
     if res.service_type != 0 or res.uri != 75:
         logging.warning("ap proxy return error: {}".format(res.__dict__))
-        return None, None
+        return None
     ib:InnerBody = res.response_body
     if ib.uri != 2:
         logging.warning("ap proxy return wrong inner uri: {}".format(ib.uri))
-        return None, None
+        return None
     lbs_res:UniLbsResponse = unpack(BitStream(ib.buffer), UniLbsResponse)
     if len(lbs_res.edge_services) == 0:
         logging.warning("ap proxy return empty entry.")
-        return None, None
-    edge:EdgeServiceAddress = lbs_res.edge_services[0] # pylint: disable=unsubscriptable-object
-    # edge_ip is net order, edge_port is host order
-    edge_ip = inet_ntop(AF_INET, bytes(edge.ip))
-    return edge_ip, edge.port
+        return None
+    res = []
+    for edge in lbs_res.edge_services: # pylint: disable=not-an-iterable
+        # edge_ip is net order, edge_port is host order
+        edge_ip = inet_ntop(AF_INET, bytes(edge.ip))
+        if edge_ip is None or edge.port is None:
+            continue
+        res.append({"ip": edge_ip, "port": edge.port})
+    return res
 
 # tcp proxy: uri to packet types map
 tcp_proxy_uri_packets = {

@@ -13,10 +13,9 @@ def ap_fetch_cp(role, ap_ip, ap_port):
     ptr.send()
     pac = ptr.recv_packet()
     if pac is None:
-        return None, None
+        return None
     packet = pk.unpack(BitStream(pac), pt.GenericResponse)
     if packet is None:
-        return None, None
-    eip, eport = pt.read_ap_proxy_res(packet)
-    return eip, eport
-
+        return None
+    addrs = pt.read_ap_proxy_res(packet)
+    return addrs
