@@ -24,6 +24,7 @@ from packet.packet_types import Packet, service_type_map
 CLOUDPROXY_LOCAL_IP_FILE = "/data/log/agora/cloudproxy_local_ip.log"
 if platform.system() == 'Windows':
     CLOUDPROXY_LOCAL_IP_FILE = "./cloudproxy_local_ip.log"
+INFLUX_DEBUG = False
 
 # check if the folder exists before use.
 # return void
@@ -36,8 +37,11 @@ def append_file(data, filename):
 
 # return client
 def influxdb_client():
-    # TODO debug mode now
-    client = InfluxDBClient('10.62.0.60', 8086, "", "", "cloudproxy")
+    if INFLUX_DEBUG: 
+        client = InfluxDBClient('10.62.0.60', 8086, "", "", "cloudproxy")
+    else:
+        client = InfluxDBClient('report-cloudproxy.influx.agoralab.co', 443, \
+                'cloudproxy_report_write', 'KPT13zfPQOBk4UMu', "cloudproxy")
     return client
 
 # read my ip from local cache or fetch from server
@@ -186,6 +190,7 @@ class TestBase:
         self.err_code_cnts = error_code_counts # error counts on errcodes. it is a global variable
         self.err_ip_cnts = {} # error counts on ips of one hostname
         self.errcheck_ts = datetime.now() # err_ip_stat last check timestamp
+        self.client = influxdb_client()
     
     def stop(self):
         self.stop_event.set()
@@ -312,11 +317,9 @@ class TestBase:
             ]
             json_body[0]["fields"] = {**json_body[0]["fields"], **cp_coll.move()}
             logging.info("write_point: {}".format(json_body))
-            client = influxdb_client()
-            client.write_points(json_body)
+            self.client.write_points(json_body)
             logging.info("point written")
         except:
             err_info = "influxdb write error: {}".format(traceback.format_exc())
             logging.warning(err_info)
-        # influxdb http client doesn't need close
         
