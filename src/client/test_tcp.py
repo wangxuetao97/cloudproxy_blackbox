@@ -249,7 +249,7 @@ class TestTcp(TestBase):
                 self.record_err(TestError.UDP_PAYLOAD_CORRUPTED)
                 # hard to figure out the proxy channel state, so abort test now.
                 return -1
-            logging.info(">>>>> get udp payload")
+            logging.debug(">>>>> get udp payload")
             print_packet(payload_bytes)
             return self.check_ap_payload(payload_bytes)
         elif uri == 8:
@@ -259,12 +259,12 @@ class TestTcp(TestBase):
                 self.record_err(TestError.TCP_PAYLOAD_CORRUPTED)
                 # hard to figure out the proxy channel state, so abort test now.
                 return -1
-            logging.info(">>>>> get tcp payload")
+            logging.debug(">>>>> get tcp payload")
             print_packet(payload_bytes)
             return self.check_ap_payload(payload_bytes)
         elif uri == 10:
             # Pong Pack
-            logging.info("Pong: {}, {}".format(packet.ts, datetime.fromtimestamp(packet.ts)))
+            logging.debug("Pong: {}, {}".format(packet.ts, datetime.fromtimestamp(packet.ts)))
         else:
             # handle invalid uri
             self.record_err(TestError.WRONG_URI_RETURN)

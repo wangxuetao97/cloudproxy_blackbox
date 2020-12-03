@@ -156,13 +156,13 @@ class TestUdp(TestBase):
                 self.link_id = None
             elif uri == 5:
                 # Udp Pong
-                logging.info("Pong: {}, {}".format(packet.ts, datetime.fromtimestamp(packet.ts)))
+                logging.debug("Pong: {}, {}".format(packet.ts, datetime.fromtimestamp(packet.ts)))
             else:
                 # handle invalid uri
                 self.record_err(TestError.WRONG_URI_RETURN)
         else:
             if len(packet_bytes) > 12:
-                logging.info(">>>>> get udp payload")
+                logging.debug(">>>>> get udp payload")
                 print_packet(packet_bytes)
                 return self.check_ap_payload(packet_bytes)                
             else:

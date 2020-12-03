@@ -47,7 +47,7 @@ class ProxyTcpRequest:
     def send(self):
         if (self._socket is None):
             return
-        logging.info("<<<<< sending")
+        logging.debug("<<<<< sending")
         print_packet(self._data)
         totalsent = 0
         while totalsent < len(self._data):
@@ -100,7 +100,7 @@ class ProxyTcpRequest:
                 logging.warning(err_info)
                 return None
         res = b''.join(chunks)
-        logging.info(">>>>> receiving")
+        logging.debug(">>>>> receiving")
         print_packet(res)
         return res
 
@@ -111,7 +111,7 @@ class ProxyTcpRequest:
             if uri == 7:
                 packet = unpack(BitStream(payload_packet_bytes), tcp_proxy_uri_packets[7])
             elif uri == 8:
-                logging.info('get_payload: {}'.format(payload_packet_bytes))
+                logging.debug('get_payload: {}'.format(payload_packet_bytes))
                 packet = unpack(BitStream(payload_packet_bytes), tcp_proxy_uri_packets[8])
             else:
                 logging.warning("Invalid payload packet uri in tcp proxy: {}".format(uri))
@@ -141,7 +141,7 @@ class ProxyTcpRequest:
                     .format(size_needed, actual_size))
             return None
         if size_needed == actual_size:
-            logging.info("Recv_full_packet: First packet is full packet.")
+            logging.debug("Recv_full_packet: First packet is full packet.")
             return payload 
         # read remaining packets now
         while size_needed > actual_size:

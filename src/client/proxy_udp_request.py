@@ -48,9 +48,9 @@ class ProxyUdpRequest:
     def send(self):
         if not self.valid_socket():
             return
-        logging.info("<<<<< sending")
-        logging.info("length: {}".format(len(self._data)))
-        logging.info(self._data)
+        logging.debug("<<<<< sending")
+        logging.debug("length: {}".format(len(self._data)))
+        logging.debug(self._data)
         try:
             sent = self._socket.sendto(self._data, (self._remote_ip, self._remote_port))
             if (sent != len(self._data)):
@@ -75,9 +75,9 @@ class ProxyUdpRequest:
             err_info = "UDP Read packet too small, len: {}".format(len(res))
             logging.warning(err_info)
             return None
-        logging.info(">>>>> receiving")
-        logging.info("length: {}".format(len(res)))
-        logging.info(res)
+        logging.debug(">>>>> receiving")
+        logging.debug("length: {}".format(len(res)))
+        logging.debug(res)
         return res
 
     def close(self):

@@ -41,7 +41,8 @@ def influxdb_client():
         client = InfluxDBClient('10.62.0.60', 8086, "", "", "cloudproxy")
     else:
         client = InfluxDBClient('report-cloudproxy.influx.agoralab.co', 443, \
-                'cloudproxy_report_write', 'KPT13zfPQOBk4UMu', "cloudproxy")
+                'cloudproxy_report_write', 'KPT13zfPQOBk4UMu', "cloudproxy", \
+                ssl=True, verify_ssl=True)
     return client
 
 # read my ip from local cache or fetch from server
@@ -106,11 +107,11 @@ def print_packet(packet_bytes):
         packet_size, head_size = get_packet_size(packet_bytes)
         service_id = packet_bytes[head_size] + (packet_bytes[head_size + 1] << 8)
         uri = packet_bytes[head_size + 2] + (packet_bytes[head_size + 3] << 8)
-        logging.info("packet size: {}(p)/{}(h), head size: {}, service: {}, uri: {}"\
+        logging.debug("packet size: {}(p)/{}(h), head size: {}, service: {}, uri: {}"\
                 .format(len(packet_bytes), packet_size, head_size, service_id, uri))
-        logging.info("packet: {}".format(packet_bytes))
+        logging.debug("packet: {}".format(packet_bytes))
         packet = unpack(BitStream(packet_bytes), service_type_map[service_id][uri])
-        logging.info("{}:{}".format(packet.__class__, packet.__dict__))
+        logging.debug("{}:{}".format(packet.__class__, packet.__dict__))
     except Exception as e:
         logging.warning('Print Packet Error: {}'.format(e))
 
