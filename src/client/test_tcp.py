@@ -62,7 +62,7 @@ class TestTcp(TestBase):
                     self.req.make_packet(1)
                     self.req.packet.version = 0
                     self.req.packet.sid = RandomString()
-                    self.req.packet.detail = {}
+                    self.req.packet.detail = {2: '123456'}
                 elif self.step.action == TestAction.CPALLOCTCP \
                         or self.step.action == TestAction.CPALLOCUDP:
                     self.req.make_packet(3)

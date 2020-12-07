@@ -55,7 +55,7 @@ class TestUdp(TestBase):
                     self.req.packet.sid = RandomString()
                     self.req.packet.ticket = RandomString()
                     self.req.packet.token = RandomString()
-                    self.req.packet.detail = {}
+                    self.req.packet.detail = {2: '123456'}
                     self.req.set_header(1, '127.0.0.1', 1)
                 elif self.step.action == TestAction.CPPING:
                     if self.link_id is None:
