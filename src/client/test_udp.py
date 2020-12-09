@@ -35,6 +35,7 @@ class TestUdp(TestBase):
 
     def start_test(self):
         logging.info("Test start")
+        self.err_req_stat.inc_total_cnt()
         self.req = ProxyUdpRequest()
         if not self.req.valid_socket():
             self.record_err(TestError.CONNECT_PROXY_FAILED)
@@ -122,7 +123,7 @@ class TestUdp(TestBase):
                 self.record_err(TestError.PING_FAILED)
                 return 0
             else:
-                self.record_err(TestError.PACKET_CORRUPTED)
+                self.record_err(TestError.CONNECT_PROXY_FAILED)
                 return -1
         
         # conn_id = int.from_bytes(raw_bytes[0:4], 'little')

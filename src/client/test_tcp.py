@@ -46,6 +46,7 @@ class TestTcp(TestBase):
             self.req = ProxyTlsRequest()
         else:
             raise ValueError('TestTcp: unknown role: {}'.format(self.role))
+        self.err_req_stat.inc_total_cnt()
         self.req.connect(self.server_ip, self.cp_port)
         if not self.req.valid_socket():
             # connect failure handle
@@ -164,7 +165,7 @@ class TestTcp(TestBase):
                 self.record_err(TestError.RELEASE_FAILED)
                 return 0
             else:
-                self.record_err(TestError.PACKET_CORRUPTED)
+                self.record_err(TestError.CONNECT_PROXY_FAILED)
                 return -1
 
         # corrupted packet always leads to test abortion
@@ -210,7 +211,8 @@ class TestTcp(TestBase):
             # Tcp link not exist: 5
             # Release fail: 6
             # Channel config fail: 7
-            if packet.link_id not in self.tcp_link_ids \
+            if packet.link_id != 0xffff \
+                    and packet.link_id not in self.tcp_link_ids \
                     and packet.link_id not in self.udp_link_ids:
                 self.record_err(TestError.WRONG_LINKID_RETURN)
                 return -1
