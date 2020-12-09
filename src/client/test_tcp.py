@@ -6,16 +6,19 @@ import logging
 import time
 
 from base.rand import RandomNumber32, RandomNumber64, RandomString
-from client.test_base import TestBase, TestAction, TestStep, TestError, agolet_report, print_packet
+from client.test_base import TestBase, TestAction, TestStep, TestError,\
+        agolet_report, print_packet
 from client.proxy_tcp_request import ProxyTcpRequest
 from client.proxy_tls_request import ProxyTlsRequest
 from packet.packer import pack, unpack, get_packet_size, get_serv_uri
-from packet.packet_types import tcp_proxy_uri_packets, voc_uri_packet, make_ap_proxy_req, read_ap_proxy_res, VOC_SERVTYPE, PROXY_TCP_SERVTYPE
+from packet.packet_types import tcp_proxy_uri_packets, voc_uri_packet,\
+        make_ap_proxy_req, read_ap_proxy_res, VOC_SERVTYPE, PROXY_TCP_SERVTYPE
 
 MAX_RETRY_COUNT = 1
 
 class TestTcp(TestBase):
-    def __init__(self, hostname, cp_port, ap_ip, ap_tcp_port, ap_udp_port, tls=False):
+    def __init__(self, hostname, cp_port,\
+                ap_ip, ap_tcp_port, ap_udp_port, tls=False):
         super().__init__('tcp' if tls == False else 'tls', hostname)
         self.cp_port = cp_port
         self.ap_ip = ap_ip
@@ -54,7 +57,8 @@ class TestTcp(TestBase):
             while idx < len(self.test_plan):
                 self.step = self.test_plan[idx]
                 idx += 1
-                logging.info("start step #{0}, wait {1} secs then do {2}.".format(idx, self.step.wait, self.step.action.name))
+                logging.info("start step #{0}, wait {1} secs then do {2}."\
+                        .format(idx, self.step.wait, self.step.action.name))
                 if self.stop_event.wait(self.step.wait):
                     break
                 # prepare content
@@ -109,6 +113,10 @@ class TestTcp(TestBase):
                     self.last_ping_time = self.req.packet.ts
                 elif self.step.action == TestAction.CPWAITRELEASE:
                     pass
+                elif self.step.action == TestAction.CPCONFIGVID:
+                    self.req.make_packet(11)
+                    self.req.packet.link_id = 0xffff
+                    self.req.packet.detail = {11: "123456"}
                 else:
                     logging.warning("Unknown test step in TCP proxy test.")
                     self.record_err(TestError.PYTHON_ERROR)
@@ -217,6 +225,8 @@ class TestTcp(TestBase):
                         self.record_err(TestError.WRONG_LINKID_RETURN)
                         return -1
                     self.udp_link_ids.remove(packet.link_id)
+                elif action == TestAction.CPCONFIGVID:
+                    pass
                 else:
                     self.record_err(TestError.UNEXPECTED_PACKET)
             elif packet.status == 6:

@@ -126,6 +126,7 @@ class TestAction(Enum):
     CPWAITRELEASE = 8
     CPPING = 9
     CPQUIT = 10
+    CPCONFIGVID = 11
 
 class TestStep:
     def __init__(self, wait = 0, action = TestAction.CPPING, **kwargs):
@@ -214,8 +215,10 @@ class TestBase:
         self.err_req_stat.inc_err_cnt()
     
     def agolet_burst_msg(self, time_delta, remote, value) -> str:
-        return "Cloudproxy blackbox role <{0}> error burst in {4} min, error_counts: {1}, "\
-                "from {2} to {3}".format(self.role, value, self.local_ip, remote, int(time_delta.total_seconds() / 60))
+        return "Cloudproxy blackbox role <{0}> error burst in {4} min,"\
+                " error_counts: {1}, from {2} to {3}"\
+                .format(self.role, value, self.local_ip, remote,\
+                int(time_delta.total_seconds() / 60))
 
     def agolet_success_rate_msg(self, value) -> str:
         return "Cloudproxy blackbox role <{0}> success rate warning: {1} from {3} to {2}"\
@@ -227,6 +230,8 @@ class TestBase:
         self.test_plan.clear()
         total_time = randint(10, 600)
         self.test_plan.append(TestStep(0, TestAction.CPJOIN))
+        if self.role == 'tcp':
+            self.test_plan.append(TestStep(1, TestAction.CPCONFIGVID))
         while total_time > 3:
             wait_time = min(randint(3, 30), total_time)
             total_time -= wait_time
@@ -250,7 +255,8 @@ class TestBase:
     def print_plan(self):
         logging.info("Test plan:")
         for i, step in enumerate(self.test_plan):
-            logging.info("Step #{0}: wait {1} seconds then do {2}".format(i, step.wait, step.action.name))
+            logging.info("Step #{0}: wait {1} seconds then do {2}"\
+                    .format(i, step.wait, step.action.name))
 
     # logging and report to agolet
     def check_statistics(self):
