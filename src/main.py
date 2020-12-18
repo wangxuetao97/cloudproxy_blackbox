@@ -66,7 +66,10 @@ class Job(threading.Thread):
     def run(self):
         self.loop_part()
         while not self.stopped.wait(self.interval.total_seconds()):
+            logging.info("Job loop begin")
             self.loop_part()
+            logging.info("Job loop end, wait for {} seconds".format(\
+                    self.interval.total_seconds))
 
 class ProgramKilled(Exception):
     pass
