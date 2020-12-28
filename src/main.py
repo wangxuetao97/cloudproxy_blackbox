@@ -102,6 +102,7 @@ def main():
         for cp_addr in addrs:
             eip = cp_addr["ip"]
             eport = cp_addr["port"]
+            logging.info("Get cloudproxy addr: {}:{}".format(eip, eport))
             if blackbox_role == 'udp':
                 host_test_map[host] = TestUdp(eip, eport, aip, 8000)
             elif blackbox_role == 'tcp':

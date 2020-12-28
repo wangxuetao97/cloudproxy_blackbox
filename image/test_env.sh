@@ -1,8 +1,7 @@
 #!/bin/bash
 
-proj_dir=$(git rev-parse --show-toplevel)
-
 function build {
+    local proj_dir=$(git rev-parse --show-toplevel)
     "$proj_dir"/image/build_image.sh -t
     "$proj_dir"/image/build_image.sh -b
 }
