@@ -69,7 +69,7 @@ class Job(threading.Thread):
             logging.info("Job loop begin")
             self.loop_part()
             logging.info("Job loop end, wait for {} seconds".format(\
-                    self.interval.total_seconds))
+                    self.interval.total_seconds()))
 
 class ProgramKilled(Exception):
     pass
@@ -88,12 +88,14 @@ def main():
     hosts = config_json["ap_hostnames"]
     for host in hosts:
         aip = nslookup(host)
+        aport = 25000
         if aip is None:
             err_info = "Ap nslookup failed for: {}".format(host)
             logging.warning(err_info)
             print(err_info)
             sys.exit(1)
-        addrs = ap_fetch_cp(blackbox_role, aip, 25000)
+        logging.info("Fetch proxy addr from ap: {}:{}".format(aip, aport))
+        addrs = ap_fetch_cp(blackbox_role, aip, aport)
         if len(addrs) == 0:
             err_info = "Ap fetch cloudproxy edge failed."
             logging.warning(err_info)

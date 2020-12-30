@@ -235,7 +235,7 @@ def make_ap_proxy_req(role):
         lbs_req.flag = 1 << 18
     else:
         raise ValueError("Unknown role: {}".format(role))
-    lbs_req.key = RandomString()
+    lbs_req.key = '6b1865d1da1f438d974ba72de4cb1ddd'
     lbs_req.cname = RandomString()
     lbs_req.uid = RandomNumber32()
     lbs_req.detail = {}
