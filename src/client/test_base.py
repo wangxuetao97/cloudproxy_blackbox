@@ -313,10 +313,11 @@ class TestBase:
                     "measurement": "cloudproxy_quality",
                     "tags": {
                         "local_ip": self.local_ip,
+                        "server_ip": self.server_ip,
+                        "client_type": self.role,
                         "idc": self.idc,
                     },
                     "fields": {
-                        "client_type": self.role
                     }
                 }
             ]
