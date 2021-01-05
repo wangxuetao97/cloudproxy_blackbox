@@ -49,7 +49,7 @@ class TcpClient:
         while True:
             try:
                 chunk = self._socket.recv(4096)
-                if chunk == '':
+                if len(chunk) == 0:
                     break
                 chunks.append(chunk)
                 recv_len += len(chunk)
@@ -70,11 +70,11 @@ class TcpClient:
         while True:
             try:
                 chunk = self._socket.recv(4096)
-                if chunk == "":
+                if len(chunk) == 0:
                     break
                 chunks.append(chunk)
                 bytes_recv += len(chunk)
-                if self.callback:
+                if bytes_recv > 0 and self.callback:
                     succ, packet = self.callback(b''.join(chunks))
                     if succ:
                         break
