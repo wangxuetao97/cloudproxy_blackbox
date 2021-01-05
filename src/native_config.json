@@ -1,5 +1,6 @@
 {
     "ap_hostnames": [
-        "114.236.137.40"
-    ]
+        "106.14.12.130"
+    ],
+    "local_cloudproxy": false
 }

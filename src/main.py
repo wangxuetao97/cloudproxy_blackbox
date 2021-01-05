@@ -85,7 +85,8 @@ def main():
     if config_json is None:
         logging.warning("Load config failed. Exit now.")
         sys.exit(1)
-    hosts = config_json["ap_hostnames"]
+    hosts = config_json.get("ap_hostnames", [])
+    use_local_cloudproxy = config_json.get("local_cloudproxy", False)
     for host in hosts:
         aip = nslookup(host)
         aport = 25000
@@ -95,21 +96,27 @@ def main():
             print(err_info)
             sys.exit(1)
         logging.info("Fetch proxy addr from ap: {}:{}".format(aip, aport))
-        addrs = ap_fetch_cp(blackbox_role, aip, aport)
-        if len(addrs) == 0:
-            err_info = "Ap fetch cloudproxy edge failed."
-            logging.warning(err_info)
-            print(err_info)
-            sys.exit(1)
+        if use_local_cloudproxy:
+            addrs = [{"ip": "127.0.0.1"}]
+        else:
+            addrs = ap_fetch_cp(blackbox_role, aip, aport)
+            if len(addrs) == 0:
+                err_info = "Ap fetch cloudproxy edge failed."
+                logging.warning(err_info)
+                print(err_info)
+                sys.exit(1)
         for cp_addr in addrs:
-            eip = cp_addr["ip"]
-            eport = cp_addr["port"]
+            eip = cp_addr.get("ip", None)
+            eport = cp_addr.get("port", None)
             logging.info("Get cloudproxy addr: {}:{}".format(eip, eport))
             if blackbox_role == 'udp':
+                eport = 8001 if eport == None else eport
                 host_test_map[host] = TestUdp(eip, eport, aip, 8000)
             elif blackbox_role == 'tcp':
+                eport = 7890 if eport == None else eport
                 host_test_map[host] = TestTcp(eip, eport, aip, 25000, 8000)
             elif blackbox_role == 'tls':
+                eport = 443 if eport == None else eport
                 host_test_map[host] = TestTcp(eip, eport, aip, 25000, 8000, tls=True)
             else:
                 raise ValueError("main: unknown role: {}".format(blackbox_role))
