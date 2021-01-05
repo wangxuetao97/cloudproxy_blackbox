@@ -95,10 +95,12 @@ def main():
             logging.warning(err_info)
             print(err_info)
             sys.exit(1)
-        logging.info("Fetch proxy addr from ap: {}:{}".format(aip, aport))
         if use_local_cloudproxy:
+            logging.info("Use localhost cloudproxy, testing ap: {}:{}"
+                    .format(aip, aport))
             addrs = [{"ip": "127.0.0.1"}]
         else:
+            logging.info("Fetch proxy addr from ap: {}:{}".format(aip, aport))
             addrs = ap_fetch_cp(blackbox_role, aip, aport)
             if len(addrs) == 0:
                 err_info = "Ap fetch cloudproxy edge failed."
