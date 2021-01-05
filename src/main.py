@@ -20,6 +20,7 @@ BLACKBOX_CONFIG="native_config.json"
 BLACKBOX_VERSION = "20201116"
 BLACKBOX_INTERVAL = 60
 
+config_json = {}
 blackbox_role = None
 
 def load_config():
@@ -81,6 +82,7 @@ def main():
     signal.signal(signal.SIGTERM, signal_handler)
     signal.signal(signal.SIGINT, signal_handler)
     host_test_map = {}
+    global config_json
     config_json = load_config()
     if config_json is None:
         logging.warning("Load config failed. Exit now.")

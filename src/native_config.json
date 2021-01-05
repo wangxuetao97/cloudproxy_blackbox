@@ -2,5 +2,6 @@
     "ap_hostnames": [
         "106.14.12.130"
     ],
-    "local_cloudproxy": false
+    "local_cloudproxy": false,
+    "ignore_ap_fail": false
 }

@@ -187,7 +187,9 @@ class TestUdp(TestBase):
             self.record_err(TestError.UDP_PAYLOAD_CORRUPTED)
             return -1
         addrs = read_ap_proxy_res(apk)
-        if len(addrs) == 0:
+        import main
+        if not main.config_json.get("ignore_ap_fail", False) \
+                and (addrs is None or len(addrs)) == 0:
             self.record_err(TestError.AP_ERROR)
         return 0
 
