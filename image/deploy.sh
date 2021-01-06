@@ -27,13 +27,19 @@ function start {
     docker run -d --rm --network host --name cpblx_tls $(get_image_name tls)
 }
 
+function stop {
+    docker ps --format {{.ID}}:{{.Image}} | grep cp_blackbox_ | cut -f1 -d: | xargs docker stop
+}
+
 if [[ $# -eq 0 ]]; then
     build
     start
-elif [[ $1 == -b ]]; then
+elif [[ $1 == build ]]; then
     build
-elif [[ $1 == -s ]]; then
+elif [[ $1 == start ]]; then
     start
-elif [[ $1 == -g ]]; then
+elif [[ $1 == git ]]; then
     git_user
+elif [[ $1 == stop ]]; then
+    stop
 fi
