@@ -1,3 +1,4 @@
+from datetime import datetime, timedelta
 import socket
 import logging
 
@@ -29,7 +30,8 @@ class TcpClient:
             return
 
         total_sent = 0
-        while True:
+        start_time = datetime.now()
+        while datetime.now() - start_time < timedelta(10):
             try:
                 sent = self._socket.send(data[total_sent:])
                 if sent == 0:
@@ -46,7 +48,8 @@ class TcpClient:
 
         chunks = []
         recv_len = 0
-        while True:
+        start_time = datetime.now()
+        while datetime.now() - start_time < timedelta(10):
             try:
                 chunk = self._socket.recv(4096)
                 if len(chunk) == 0:
@@ -67,7 +70,8 @@ class TcpClient:
         chunks = []
         packet = None
         bytes_recv = 0
-        while True:
+        start_time = datetime.now()
+        while datetime.now() - start_time < timedelta(10):
             try:
                 chunk = self._socket.recv(4096)
                 if len(chunk) == 0:
