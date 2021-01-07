@@ -188,7 +188,7 @@ class TestUdp(TestBase):
             return -1
         addrs = read_ap_proxy_res(apk)
         import main
-        if not main.config_json.get("ignore_ap_fail", False) \
+        if not main.config_json.get("ignore_ap_has_no_cp", False) \
                 and (addrs is None or len(addrs)) == 0:
             self.record_err(TestError.AP_ERROR)
         return 0
