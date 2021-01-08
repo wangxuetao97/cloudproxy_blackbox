@@ -22,9 +22,9 @@ function get_image_name {
 }
 
 function start {
-    docker run -d --rm --network host --name cpblx_tcp $(get_image_name tcp)
-    docker run -d --rm --network host --name cpblx_udp $(get_image_name udp)
-    docker run -d --rm --network host --name cpblx_tls $(get_image_name tls)
+    docker run -d --rm --network host --restart unless-stopped --name cpblx_tcp $(get_image_name tcp)
+    docker run -d --rm --network host --restart unless-stopped --name cpblx_udp $(get_image_name udp)
+    docker run -d --rm --network host --restart unless-stopped --name cpblx_tls $(get_image_name tls)
 }
 
 function stop {
