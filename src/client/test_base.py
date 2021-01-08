@@ -228,7 +228,7 @@ class TestBase:
     PING_INTERVAL = 5
     def make_plan(self):
         self.test_plan.clear()
-        total_time = randint(10, 600)
+        total_time = randint(10, 200)
         self.test_plan.append(TestStep(0, TestAction.CPJOIN))
         while total_time > 3:
             wait_time = min(randint(3, 30), total_time)
