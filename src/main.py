@@ -18,7 +18,7 @@ import traceback
 
 BLACKBOX_CONFIG="native_config.json"
 BLACKBOX_VERSION = "20201116"
-BLACKBOX_INTERVAL = 60
+BLACKBOX_INTERVAL = 20
 
 config_json = {}
 blackbox_role = None
