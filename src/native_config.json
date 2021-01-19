@@ -1,7 +1,9 @@
 {
     "ap_hostnames": [
-        "50.17.126.121"
+        "192.168.99.36"
     ],
     "local_cloudproxy": true,
-    "ignore_ap_has_no_cp": true
+    "use_dns_ap": false,
+    "ignore_ap_has_no_cp": true,
+    "ignore_ap_fail": true
 }

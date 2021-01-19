@@ -20,8 +20,9 @@ BLACKBOX_CONFIG="native_config.json"
 BLACKBOX_VERSION = "20201116"
 BLACKBOX_INTERVAL = 20
 
-config_json = {}
 blackbox_role = None
+thread_close_event = threading.Event()
+thread_close_queue = []
 
 def load_config():
     j = None
@@ -47,28 +48,41 @@ class Job(threading.Thread):
     def __init__(self, interval, func, stop_func):
         threading.Thread.__init__(self)
         self.daemon = False
-        self.stopped = threading.Event()
+        self.closed = threading.Event()
         self.interval: timedelta = interval
         self.func = func
         self.stop_func = stop_func
 
-    def stop(self):
+    # close thread from other thread
+    def close(self):
         self.stop_func()
-        self.stopped.set()
+        self.closed.set()
         self.join()
     
-    def loop_part(self):
+    # close thread from self
+    def close_self(self):
+        # check not already closed from outer
+        if not self.closed.is_set():
+            thread_close_event.set()
+            thread_close_queue.append(self)
+
+    def loop_part(self) -> bool:
         try:
-            self.func()
+            return self.func()
         except Exception as e:
             logging.warning("Exception in Job: {0}".format(e))
             os.kill(os.getpid(), signal.SIGINT) # send to main thread
+    
 
     def run(self):
-        self.loop_part()
-        while not self.stopped.wait(self.interval.total_seconds()):
+        if not self.loop_part():
+            self.close_self()
+            return
+        while not self.closed.wait(self.interval.total_seconds()):
             logging.info("Job loop begin")
-            self.loop_part()
+            if not self.loop_part():
+                self.close_self()
+                return
             logging.info("Job loop end, wait for {} seconds".format(\
                     self.interval.total_seconds()))
 
@@ -82,12 +96,13 @@ def main():
     signal.signal(signal.SIGTERM, signal_handler)
     signal.signal(signal.SIGINT, signal_handler)
     host_test_map = {}
-    global config_json
     config_json = load_config()
     if config_json is None:
         logging.warning("Load config failed. Exit now.")
         sys.exit(1)
     hosts = config_json.get("ap_hostnames", [])
+    if config_json.get("use_dns_ap", False):
+        hosts = [nslookup('ap.agora.io')]
     use_local_cloudproxy = config_json.get("local_cloudproxy", False)
     for host in hosts:
         aip = nslookup(host)
@@ -96,7 +111,6 @@ def main():
             err_info = "Ap nslookup failed for: {}".format(host)
             logging.warning(err_info)
             print(err_info)
-            sys.exit(1)
         if use_local_cloudproxy:
             logging.info("Use localhost cloudproxy, testing ap: {}:{}"
                     .format(aip, aport))
@@ -108,20 +122,22 @@ def main():
                 err_info = "Ap fetch cloudproxy edge failed."
                 logging.warning(err_info)
                 print(err_info)
-                sys.exit(1)
         for cp_addr in addrs:
             eip = cp_addr.get("ip", None)
             eport = cp_addr.get("port", None)
             logging.info("Get cloudproxy addr: {}:{}".format(eip, eport))
             if blackbox_role == 'udp':
                 eport = 8001 if eport == None else eport
-                host_test_map[host] = TestUdp(eip, eport, aip, 8000)
+                host_test_map[host] = TestUdp(eip, eport, aip, 8000,\
+                        config_json)
             elif blackbox_role == 'tcp':
                 eport = 7890 if eport == None else eport
-                host_test_map[host] = TestTcp(eip, eport, aip, 25000, 8000)
+                host_test_map[host] = TestTcp(eip, eport, aip, 25000, 8000,\
+                        config_json)
             elif blackbox_role == 'tls':
                 eport = 443 if eport == None else eport
-                host_test_map[host] = TestTcp(eip, eport, aip, 25000, 8000, tls=True)
+                host_test_map[host] = TestTcp(eip, eport, aip, 25000, 8000,\
+                        config_json, tls=True)
             else:
                 raise ValueError("main: unknown role: {}".format(blackbox_role))
 
@@ -133,14 +149,23 @@ def main():
     Collectors.cp_collector.set_count(len(jobs))
     try:
         while True:
+            if thread_close_event.is_set():
+                for thr in thread_close_queue:
+                    thr.join()
+                    jobs.remove(thr)
+                thread_close_event.clear()
+            if len(jobs) == 0:
+                logging.error("All ap address is invalid or \
+no proxy address can be found, no task available.")
+                sys.exit(1)
             time.sleep(1)
     except ProgramKilled:
         for job in jobs:
-            job.stop()
+            job.close()
         logging.warning("program terminated")
     except Exception as e:
         for job in jobs:
-            job.stop()
+            job.close()
         logging.warning("Unexpected Error: {0}".format(e))
 
 

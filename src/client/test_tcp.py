@@ -1,6 +1,6 @@
 from bitstring import BitStream
 from datetime import datetime
-from socket import gethostbyname, inet_pton, AF_INET
+from socket import socket, gethostbyname, inet_pton, AF_INET, SOCK_STREAM
 
 import logging
 import time
@@ -18,8 +18,8 @@ MAX_RETRY_COUNT = 1
 
 class TestTcp(TestBase):
     def __init__(self, hostname, cp_port,\
-                ap_ip, ap_tcp_port, ap_udp_port, tls=False):
-        super().__init__('tcp' if tls == False else 'tls', hostname)
+                ap_ip, ap_tcp_port, ap_udp_port, configs, tls=False):
+        super().__init__('tcp' if tls == False else 'tls', hostname, configs)
         self.cp_port = cp_port
         self.ap_ip = ap_ip
         self.ap_tcp_port = ap_tcp_port
@@ -31,12 +31,17 @@ class TestTcp(TestBase):
         self.last_payload = None # set in start_test()
         self.step: TestStep = None # set in start_test()
 
+    # return False to exit, True to loop
     def run(self):
         self.err_req_stat.reset()
         self.make_plan()
         self.print_plan()
         self.start_test()
         self.check_statistics()
+        if self.stop_event.is_set():
+            return False
+        else:
+            return True
     
     def start_test(self):
         logging.info("Test start")
@@ -52,7 +57,7 @@ class TestTcp(TestBase):
             # connect failure handle
             self.record_err(TestError.CONNECT_PROXY_FAILED)
             return
-        
+
         idx = 0
         try:
             while idx < len(self.test_plan):
@@ -144,6 +149,9 @@ class TestTcp(TestBase):
                         time.sleep(1)
                 action = self.handle_response(packet_bytes, self.step.action)
                 if action < 0:
+                    logging.warning(
+                            "Response handler says abort test with error code {}"
+                            .format(action))
                     # handle_response says abort test
                     break
                 # handle_response says skip next <action> steps
@@ -155,7 +163,32 @@ class TestTcp(TestBase):
             logging.info("Close socket now.")
             self.req.close()
         logging.info("Test finish")
-    
+
+    def check_ap_fail(self, tcp) -> bool:
+        ap_socket = socket(AF_INET, SOCK_STREAM)
+        ap_socket.settimeout(5)
+        try:
+            if tcp:
+                ap_socket.connect((self.ap_ip, self.ap_tcp_port))
+            else:
+                ap_socket.connect((self.ap_ip, self.ap_udp_port))
+        except:
+            ap_socket.close()
+            return True
+        return False
+
+    def handle_ap_fail(self, tcp) -> bool:
+        if self.check_ap_fail(tcp):
+            self.record_err(TestError.AP_ERROR)
+            if self.configs.get("ignore_ap_fail", False):
+                logging.warning("AP fail ignored on {}".format(self.ap_ip))
+            else:
+                agolet_report(self.agolet_ap_fail_msg(self.ap_ip))
+            self.stop()
+            return True
+        else:
+            return False
+
     def handle_response(self, packet_bytes, action) -> int:
         if packet_bytes is None:
             if action == TestAction.CPPING:
@@ -164,6 +197,10 @@ class TestTcp(TestBase):
             elif action == TestAction.CPWAITRELEASE:
                 self.record_err(TestError.RELEASE_FAILED)
                 return 0
+            elif action == TestAction.CPALLOCTCP:
+                if not self.handle_ap_fail(True):
+                    self.record_err(TestError.CONNECT_PROXY_FAILED)
+                return -1
             else:
                 self.record_err(TestError.CONNECT_PROXY_FAILED)
                 return -1
@@ -193,7 +230,14 @@ class TestTcp(TestBase):
                     and action != TestAction.CPALLOCUDP:
                 self.record_err(TestError.UNEXPECTED_PACKET)
             if packet.code != 0:
-                self.record_err(TestError.ALLOC_FAILED)
+                if (action == TestAction.CPALLOCTCP \
+                        and self.handle_ap_fail(True)) or \
+                   (action == TestAction.CPALLOCUDP \
+                        and self.handle_ap_fail(False)):
+                    self.stop()
+                    return -1
+                else:
+                    self.record_err(TestError.ALLOC_FAILED)
                 if self.step.skip_step is None:
                     return 2
                 else:
@@ -292,8 +336,7 @@ class TestTcp(TestBase):
             self.record_err(TestError.TCP_PAYLOAD_CORRUPTED)
             return -1
         addrs = read_ap_proxy_res(payload_packet)
-        import main
-        if not main.config_json.get("ignore_ap_has_no_cp", False) \
+        if not self.configs.get("ignore_ap_has_no_cp", False) \
                 and (addrs is None or len(addrs)) == 0:
             self.record_err(TestError.AP_ERROR)
         return 0

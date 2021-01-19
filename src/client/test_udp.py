@@ -1,6 +1,6 @@
 from bitstring import BitStream
 from datetime import datetime
-from socket import inet_ntop, AF_INET
+from socket import inet_ntop, socket, AF_INET, SOCK_DGRAM
 
 import logging
 import traceback
@@ -12,11 +12,11 @@ from client.proxy_udp_request import ProxyUdpRequest
 from packet.packer import pack, unpack, get_packet_size, get_serv_uri
 from packet.packet_types import udp_proxy_uri_packets, voc_uri_packet, make_ap_proxy_req, read_ap_proxy_res, VOC_SERVTYPE, PROXY_UDP_SERVTYPE 
 
-MAX_RETRY_COUNT = 3
+MAX_RETRY_COUNT = 2
 
 class TestUdp(TestBase):
-    def __init__(self, cp_hostname, cp_port, ap_ip, ap_port):
-        super().__init__('udp', cp_hostname)
+    def __init__(self, cp_hostname, cp_port, ap_ip, ap_port, configs):
+        super().__init__('udp', cp_hostname, configs)
         self.cp_port = cp_port
         self.ap_ip = ap_ip
         self.ap_port = ap_port
@@ -26,12 +26,17 @@ class TestUdp(TestBase):
         self.last_payload = None
         self.step: TestStep = None
 
+    # return False to exit, True to loop
     def run(self):
         self.err_req_stat.reset()
         self.make_plan()
         self.print_plan()
         self.start_test()
         self.check_statistics()
+        if self.stop_event.is_set():
+            return False
+        else:
+            return True
 
     def start_test(self):
         logging.info("Test start")
@@ -81,6 +86,9 @@ class TestUdp(TestBase):
                     self.record_err(TestError.PYTHON_ERROR)
                 # send and recv
                 for retryidx in range(1, MAX_RETRY_COUNT + 1):
+                    if not self.req.valid_socket():
+                        logging.error("invalid udp socket")
+                        return
                     try:
                         packet_bytes = None
                         self.req.pack()
@@ -97,9 +105,6 @@ class TestUdp(TestBase):
                         return
                     if packet_bytes is not None:
                         break
-                    if not self.req.valid_socket():
-                        self.record_err(TestError.CONNECT_PROXY_FAILED)
-                        return
                     if retryidx < MAX_RETRY_COUNT:
                         self.err_req_stat.inc_timeout_cnt()
                         time.sleep(1)
@@ -113,8 +118,27 @@ class TestUdp(TestBase):
         finally:
             logging.info("Close socket now.")
             self.req.close()
-        logging.info("Test finish")
-    
+            logging.info("Test finish")
+
+    def handle_ap_fail(self) -> bool:
+        logging.info("Handle ap fail called")
+        try:
+            ap_socket = socket(AF_INET, SOCK_DGRAM)
+            ap_socket.settimeout(5)
+            ap_socket.sendto(pack(make_ap_proxy_req(self.role)),\
+                    (self.ap_ip, self.ap_port))
+            ap_socket.recv(4096)
+        except:
+            ap_socket.close()
+            self.record_err(TestError.AP_ERROR)
+            if self.configs.get("ignore_ap_fail", False):
+                logging.warning("AP fail ignored on {}".format(self.ap_ip))
+            else:
+                agolet_report(self.agolet_ap_fail_msg(self.ap_ip))
+            self.stop()
+            return True
+        return False
+
     def handle_response(self, raw_bytes, action) -> int:
         if raw_bytes is None:
             if action == TestAction.CPQUIT:
@@ -122,10 +146,14 @@ class TestUdp(TestBase):
             elif action == TestAction.CPPING:
                 self.record_err(TestError.PING_FAILED)
                 return 0
+            elif action == TestAction.CPAPTESTUDP:
+                if not self.handle_ap_fail():
+                    self.record_err(TestError.CONNECT_PROXY_FAILED)
+                return -1
             else:
                 self.record_err(TestError.CONNECT_PROXY_FAILED)
                 return -1
-        
+
         # conn_id = int.from_bytes(raw_bytes[0:4], 'little')
         head_ip = inet_ntop(AF_INET, raw_bytes[4:8])
         # head_port = int.from_bytes(raw_bytes[8:10], 'big')
@@ -187,8 +215,7 @@ class TestUdp(TestBase):
             self.record_err(TestError.UDP_PAYLOAD_CORRUPTED)
             return -1
         addrs = read_ap_proxy_res(apk)
-        import main
-        if not main.config_json.get("ignore_ap_has_no_cp", False) \
+        if not self.configs.get("ignore_ap_has_no_cp", False) \
                 and (addrs is None or len(addrs)) == 0:
             self.record_err(TestError.AP_ERROR)
         return 0

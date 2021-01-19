@@ -87,6 +87,7 @@ def agolet_report(content):
     }
     url = "http://agolet.agoralab.co/v1/agobot/message"
     try:
+        # logging.warning("agolet report: {}".format(data))
         post(url, data)
     except Exception as e:
         err_info = "Failed in agolet report: {}".format(e)
@@ -175,7 +176,7 @@ error_code_counts = {
 }
 
 class TestBase:
-    def __init__(self, role, hostname):
+    def __init__(self, role, hostname, configs):
         self.role = role
         self.server_ip = hostname 
         self.stop_event = threading.Event()
@@ -193,6 +194,7 @@ class TestBase:
         self.err_ip_cnts = {} # error counts on ips of one hostname
         self.errcheck_ts = datetime.now() # err_ip_stat last check timestamp
         self.client = influxdb_client()
+        self.configs = configs
     
     def stop(self):
         self.stop_event.set()
@@ -224,14 +226,18 @@ class TestBase:
         return "Cloudproxy blackbox role <{0}> success rate warning: {1} from {3} to {2}"\
                 .format(self.role, value, self.server_ip, self.local_ip)
 
+    def agolet_ap_fail_msg(self, ap_ip) -> str:
+        return "Ap failed on {0} from cloudproxy {1}"\
+                .format(ap_ip, self.local_ip)
+
     # TODO now TCP channel only
     PING_INTERVAL = 5
     def make_plan(self):
         self.test_plan.clear()
-        total_time = randint(10, 200)
+        total_time = randint(10, 120)
         self.test_plan.append(TestStep(0, TestAction.CPJOIN))
         while total_time > 3:
-            wait_time = min(randint(3, 30), total_time)
+            wait_time = min(randint(3, 10), total_time)
             total_time -= wait_time
             pings = int(wait_time / self.PING_INTERVAL)
             wait_time -= pings * self.PING_INTERVAL

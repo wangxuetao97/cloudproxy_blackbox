@@ -13,7 +13,7 @@ class ProxyTcpRequest:
         try:
             self._socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
             self._socket.setsockopt(socket.SOL_SOCKET, socket.SO_KEEPALIVE, 0)
-            self._socket.settimeout(5)
+            self._socket.settimeout(10)
         except socket.error as err:
             self._socket = None
             err_info = "socket creation failed with error {0}\n".format(err)
