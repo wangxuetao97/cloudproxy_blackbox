@@ -28,11 +28,15 @@ function start {
 }
 
 function stop {
-    docker ps --format {{.ID}}:{{.Image}} | grep cp_blackbox_ | cut -f1 -d: | xargs docker stop
+    cons=$(docker ps --format {{.ID}}:{{.Image}} | grep cp_blackbox_ | cut -f1 -d:)
+    if [[ -n "$cons" ]]; then
+        echo "$cons" | xargs docker stop
+    fi
 }
 
 if [[ $# -eq 0 ]]; then
     build
+    stop
     start
 elif [[ $1 == build ]]; then
     build
