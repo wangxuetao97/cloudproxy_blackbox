@@ -22,9 +22,9 @@ function get_image_name {
 }
 
 function start {
-    docker run -d --rm --network host --restart unless-stopped -v /data/log/agora:/data/log/agora --name cpblx_tcp $(get_image_name tcp)
-    docker run -d --rm --network host --restart unless-stopped -v /data/log/agora:/data/log/agora --name cpblx_udp $(get_image_name udp)
-    docker run -d --rm --network host --restart unless-stopped -v /data/log/agora:/data/log/agora --name cpblx_tls $(get_image_name tls)
+    docker run -d --network host --restart unless-stopped -v /data/log/agora:/data/log/agora --name cpblx_tcp $(get_image_name tcp)
+    docker run -d --network host --restart unless-stopped -v /data/log/agora:/data/log/agora --name cpblx_udp $(get_image_name udp)
+    docker run -d --network host --restart unless-stopped -v /data/log/agora:/data/log/agora --name cpblx_tls $(get_image_name tls)
 }
 
 function stop {
@@ -44,6 +44,7 @@ function remove {
 if [[ $# -eq 0 ]]; then
     build
     stop
+    remove
     start
 elif [[ $1 == build ]]; then
     build
