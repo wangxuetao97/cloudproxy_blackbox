@@ -22,15 +22,22 @@ function get_image_name {
 }
 
 function start {
-    docker run -d --network host --restart unless-stopped -v /data/log/agora:/data/log/agora --name cpblx_tcp $(get_image_name tcp)
-    docker run -d --network host --restart unless-stopped -v /data/log/agora:/data/log/agora --name cpblx_udp $(get_image_name udp)
-    docker run -d --network host --restart unless-stopped -v /data/log/agora:/data/log/agora --name cpblx_tls $(get_image_name tls)
+    docker run -d --rm --network host --restart unless-stopped -v /data/log/agora:/data/log/agora --name cpblx_tcp $(get_image_name tcp)
+    docker run -d --rm --network host --restart unless-stopped -v /data/log/agora:/data/log/agora --name cpblx_udp $(get_image_name udp)
+    docker run -d --rm --network host --restart unless-stopped -v /data/log/agora:/data/log/agora --name cpblx_tls $(get_image_name tls)
 }
 
 function stop {
     cons=$(docker ps --format {{.ID}}:{{.Image}} | grep cp_blackbox_ | cut -f1 -d:)
     if [[ -n "$cons" ]]; then
         echo "$cons" | xargs docker stop
+    fi
+}
+
+function remove {
+    cons=$(docker ps -a --format {{.ID}}:{{.Image}} | grep cp_blackbox_ | cut -f1 -d:)
+    if [[ -n "$cons" ]]; then
+        echo "$cons" | xargs docker rm
     fi
 }
 
@@ -46,4 +53,6 @@ elif [[ $1 == git ]]; then
     git_user
 elif [[ $1 == stop ]]; then
     stop
+elif [[ $1 == remove ]]; then
+    remove
 fi
