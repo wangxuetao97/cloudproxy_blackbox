@@ -14,7 +14,6 @@ from packet.packer import pack, unpack, get_packet_size, get_serv_uri
 from packet.packet_types import tcp_proxy_uri_packets, voc_uri_packet,\
         make_ap_proxy_req, read_ap_proxy_res, VOC_SERVTYPE, PROXY_TCP_SERVTYPE
 
-MAX_RETRY_COUNT = 1
 
 class TestTcp(TestBase):
     def __init__(self, hostname, cp_port,\
@@ -127,26 +126,21 @@ class TestTcp(TestBase):
                     logging.warning("Unknown test step in TCP proxy test.")
                     self.record_err(TestError.PYTHON_ERROR)
                 # send and recv
-                for retryidx in range(1, MAX_RETRY_COUNT + 1):
-                    try:
-                        self.err_req_stat.inc_total_cnt()
-                        if self.step.action != TestAction.CPWAITRELEASE:
-                            self.req.pack()
-                            self.req.send()
-                        packet_bytes = self.req.recv_packet()
-                    except Exception as e:
-                        self.req.close()
-                        logging.warning("Exception in send, abort test: {}".format(e))
-                        self.record_err(TestError.CONNECT_PROXY_FAILED)
-                        return
-                    if packet_bytes is not None:
-                        break
-                    if not self.req.valid_socket():
-                        self.record_err(TestError.CONNECT_PROXY_FAILED)
-                        return
-                    if retryidx < MAX_RETRY_COUNT:
-                        self.err_req_stat.inc_timeout_cnt()
-                        time.sleep(1)
+                if not self.req.valid_socket():
+                    logging.warning("Invalid tcp socket")
+                    self.record_err(TestError.CONNECT_PROXY_FAILED)
+                    return
+                try:
+                    self.err_req_stat.inc_total_cnt()
+                    if self.step.action != TestAction.CPWAITRELEASE:
+                        self.req.pack()
+                        self.req.send()
+                    packet_bytes = self.req.recv_packet()
+                except Exception as e:
+                    self.req.close()
+                    logging.warning("Exception in send, abort test: {}".format(e))
+                    self.record_err(TestError.CONNECT_PROXY_FAILED)
+                    return
                 action = self.handle_response(packet_bytes, self.step.action)
                 if action < 0:
                     logging.warning(
@@ -178,6 +172,7 @@ class TestTcp(TestBase):
         return False
 
     def handle_ap_fail(self, tcp) -> bool:
+        logging.info("Handle ap fail called")
         if self.check_ap_fail(tcp):
             self.record_err(TestError.AP_ERROR)
             if self.configs.get("ignore_ap_fail", False):
