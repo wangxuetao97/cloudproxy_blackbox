@@ -4,6 +4,7 @@
     ],
     "local_cloudproxy": true,
     "use_dns_ap": false,
+    "use_dns_ap_on_every_test": true,
     "ignore_ap_has_no_cp": true,
     "ignore_ap_fail": true
 }

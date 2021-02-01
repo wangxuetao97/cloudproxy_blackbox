@@ -7,7 +7,7 @@ import time
 
 from base.rand import RandomNumber32, RandomNumber64, RandomString
 from client.test_base import TestBase, TestAction, TestStep, TestError,\
-        agolet_report, print_packet
+        agolet_report, print_packet, nslookup
 from client.proxy_tcp_request import ProxyTcpRequest
 from client.proxy_tls_request import ProxyTlsRequest
 from packet.packer import pack, unpack, get_packet_size, get_serv_uri
@@ -17,10 +17,10 @@ from packet.packet_types import tcp_proxy_uri_packets, voc_uri_packet,\
 
 class TestTcp(TestBase):
     def __init__(self, hostname, cp_port,\
-                ap_ip, ap_tcp_port, ap_udp_port, configs, tls=False):
+                ap_host, ap_tcp_port, ap_udp_port, configs, tls=False):
         super().__init__('tcp' if tls == False else 'tls', hostname, configs)
         self.cp_port = cp_port
-        self.ap_ip = ap_ip
+        self.ap_host = ap_host
         self.ap_tcp_port = ap_tcp_port
         self.ap_udp_port = ap_udp_port
         self.tcp_link_ids = []
@@ -33,6 +33,7 @@ class TestTcp(TestBase):
     # return False to exit, True to loop
     def run(self):
         self.err_req_stat.reset()
+        self.ap_ip = nslookup(self.ap_host)
         self.make_plan()
         self.print_plan()
         self.start_test()

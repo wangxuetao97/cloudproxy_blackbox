@@ -102,20 +102,21 @@ def main():
         sys.exit(1)
     hosts = config_json.get("ap_hostnames", [])
     if config_json.get("use_dns_ap", False):
-        hosts = [nslookup('ap.agora.io')]
+        hosts = ['ap.agora.io']
     use_local_cloudproxy = config_json.get("local_cloudproxy", False)
     for host in hosts:
-        aip = nslookup(host)
+        if not config_json.get("use_dns_ap_on_every_test", False):
+            ahost = nslookup(host)
+        # or ahost will be dns on every test
         aport = 25000
-        if aip is None:
+        if ahost is None:
             err_info = "Ap nslookup failed for: {}".format(host)
             logging.warning(err_info)
             print(err_info)
         if use_local_cloudproxy:
-            logging.info("Use localhost cloudproxy, testing ap: {}:{}"
-                    .format(aip, aport))
             addrs = [{"ip": "127.0.0.1"}]
         else:
+            aip = nslookup(ahost)
             logging.info("Fetch proxy addr from ap: {}:{}".format(aip, aport))
             addrs = ap_fetch_cp(blackbox_role, aip, aport)
             if len(addrs) == 0:
@@ -128,15 +129,15 @@ def main():
             logging.info("Get cloudproxy addr: {}:{}".format(eip, eport))
             if blackbox_role == 'udp':
                 eport = 8001 if eport == None else eport
-                host_test_map[host] = TestUdp(eip, eport, aip, 8000,\
+                host_test_map[host] = TestUdp(eip, eport, ahost, 8000,\
                         config_json)
             elif blackbox_role == 'tcp':
                 eport = 7890 if eport == None else eport
-                host_test_map[host] = TestTcp(eip, eport, aip, 25000, 8000,\
+                host_test_map[host] = TestTcp(eip, eport, ahost, 25000, 8000,\
                         config_json)
             elif blackbox_role == 'tls':
                 eport = 443 if eport == None else eport
-                host_test_map[host] = TestTcp(eip, eport, aip, 25000, 8000,\
+                host_test_map[host] = TestTcp(eip, eport, ahost, 25000, 8000,\
                         config_json, tls=True)
             else:
                 raise ValueError("main: unknown role: {}".format(blackbox_role))

@@ -7,18 +7,20 @@ import traceback
 import time
 
 from base.rand import RandomNumber32, RandomNumber64, RandomString
-from client.test_base import TestBase, TestAction, TestStep, TestError, agolet_report, print_packet
+from client.test_base import TestBase, TestAction, TestStep, TestError,\
+        agolet_report, print_packet, nslookup
 from client.proxy_udp_request import ProxyUdpRequest
 from packet.packer import pack, unpack, get_packet_size, get_serv_uri
-from packet.packet_types import udp_proxy_uri_packets, voc_uri_packet, make_ap_proxy_req, read_ap_proxy_res, VOC_SERVTYPE, PROXY_UDP_SERVTYPE 
+from packet.packet_types import udp_proxy_uri_packets, voc_uri_packet,\
+        make_ap_proxy_req, read_ap_proxy_res, VOC_SERVTYPE, PROXY_UDP_SERVTYPE 
 
 MAX_RETRY_COUNT = 2
 
 class TestUdp(TestBase):
-    def __init__(self, cp_hostname, cp_port, ap_ip, ap_port, configs):
+    def __init__(self, cp_hostname, cp_port, ap_host, ap_port, configs):
         super().__init__('udp', cp_hostname, configs)
         self.cp_port = cp_port
-        self.ap_ip = ap_ip
+        self.ap_host = ap_host
         self.ap_port = ap_port
         self.link_id = None
         self.req = None
@@ -29,6 +31,7 @@ class TestUdp(TestBase):
     # return False to exit, True to loop
     def run(self):
         self.err_req_stat.reset()
+        self.ap_ip = nslookup(self.ap_host)
         self.make_plan()
         self.print_plan()
         self.start_test()
@@ -52,7 +55,8 @@ class TestUdp(TestBase):
             while idx < len(self.test_plan):
                 self.step = self.test_plan[idx]
                 idx += 1
-                logging.info("start step #{0}, wait {1} secs then do {2}.".format(idx, self.step.wait, self.step.action.name))
+                logging.info("start step #{0}, wait {1} secs then do {2}."\
+                        .format(idx, self.step.wait, self.step.action.name))
                 if self.stop_event.wait(self.step.wait):
                     break
                 if self.step.action == TestAction.CPJOIN:
@@ -183,6 +187,7 @@ class TestUdp(TestBase):
                     self.record_err(TestError.CONNECT_PROXY_FAILED)
                 logging.warning("Udp connection get reset.")
                 self.link_id = None
+                return -1
             elif uri == 5:
                 # Udp Pong
                 logging.debug("Pong: {}, {}".format(packet.ts, datetime.fromtimestamp(packet.ts)))
