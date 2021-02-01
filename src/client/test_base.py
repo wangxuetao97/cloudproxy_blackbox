@@ -177,6 +177,7 @@ error_code_counts = {
 
 class TestBase:
     def __init__(self, role, hostname, configs):
+        self.ap_ip = None
         self.role = role
         self.server_ip = hostname 
         self.stop_event = threading.Event()
@@ -257,7 +258,7 @@ class TestBase:
             self.test_plan.append(TestStep(0, TestAction.CPQUIT))
 
     def print_plan(self):
-        logging.info("Test plan:")
+        logging.info("Testing ap {} with plan:".format(self.ap_ip))
         for i, step in enumerate(self.test_plan):
             logging.info("Step #{0}: wait {1} seconds then do {2}"\
                     .format(i, step.wait, step.action.name))

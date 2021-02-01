@@ -63,6 +63,7 @@ class Job(threading.Thread):
     def close_self(self):
         # check not already closed from outer
         if not self.closed.is_set():
+            # these two variables will be read in main function
             thread_close_event.set()
             thread_close_queue.append(self)
 
@@ -105,18 +106,21 @@ def main():
         hosts = ['ap.agora.io']
     use_local_cloudproxy = config_json.get("local_cloudproxy", False)
     for host in hosts:
-        if not config_json.get("use_dns_ap_on_every_test", False):
-            ahost = nslookup(host)
-        # or ahost will be dns on every test
+        if config_json.get("use_dns_ap_on_every_test", False):
+            # ap host will be dns on every test
+            ap_host = host
+        else:
+            ap_host = nslookup(host)
+            if ap_host is None:
+                err_info = "Ap nslookup failed for: {}".format(host)
+                logging.error(err_info)
+                print(err_info)
+                continue
         aport = 25000
-        if ahost is None:
-            err_info = "Ap nslookup failed for: {}".format(host)
-            logging.warning(err_info)
-            print(err_info)
         if use_local_cloudproxy:
             addrs = [{"ip": "127.0.0.1"}]
         else:
-            aip = nslookup(ahost)
+            aip = nslookup(ap_host)
             logging.info("Fetch proxy addr from ap: {}:{}".format(aip, aport))
             addrs = ap_fetch_cp(blackbox_role, aip, aport)
             if len(addrs) == 0:
@@ -129,22 +133,23 @@ def main():
             logging.info("Get cloudproxy addr: {}:{}".format(eip, eport))
             if blackbox_role == 'udp':
                 eport = 8001 if eport == None else eport
-                host_test_map[host] = TestUdp(eip, eport, ahost, 8000,\
+                host_test_map[host] = TestUdp(eip, eport, ap_host, 8000,\
                         config_json)
             elif blackbox_role == 'tcp':
                 eport = 7890 if eport == None else eport
-                host_test_map[host] = TestTcp(eip, eport, ahost, 25000, 8000,\
+                host_test_map[host] = TestTcp(eip, eport, ap_host, 25000, 8000,\
                         config_json)
             elif blackbox_role == 'tls':
                 eport = 443 if eport == None else eport
-                host_test_map[host] = TestTcp(eip, eport, ahost, 25000, 8000,\
+                host_test_map[host] = TestTcp(eip, eport, ap_host, 25000, 8000,\
                         config_json, tls=True)
             else:
                 raise ValueError("main: unknown role: {}".format(blackbox_role))
 
     jobs = []
     for _, test in host_test_map.items():
-        job = Job(interval=timedelta(seconds=BLACKBOX_INTERVAL), func=test.run, stop_func=test.stop)
+        job = Job(interval=timedelta(seconds=BLACKBOX_INTERVAL), func=test.run,\
+                stop_func=test.stop)
         job.start()
         jobs.append(job)
     Collectors.cp_collector.set_count(len(jobs))

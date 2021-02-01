@@ -34,6 +34,10 @@ class TestTcp(TestBase):
     def run(self):
         self.err_req_stat.reset()
         self.ap_ip = nslookup(self.ap_host)
+        if self.ap_ip is None:
+            err_info = "Ap nslookup failed for: {}".format(self.ap_host)
+            logging.error(err_info)
+            return True
         self.make_plan()
         self.print_plan()
         self.start_test()
