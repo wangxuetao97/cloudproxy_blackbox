@@ -213,13 +213,13 @@ def check_ap_response(req, res) -> bool:
         return False
     return True
 
-def make_ap_proxy_req(role):
+def make_ap_proxy_req(role, staging_env):
     # simulate ap_generic_lbs_request
     from packet.packer import pack
     req = GenericRequest()
     req.service_type = VOC_SERVTYPE
     req.uri = 74
-    req.sid = ''
+    req.sid = 'cloudproxy_blackbox'
     req.opid = RandomNumber64()
     req.client_ts = int(datetime.now().timestamp())
     req.appid = RandomString()
@@ -235,7 +235,10 @@ def make_ap_proxy_req(role):
         lbs_req.flag = 1 << 18
     else:
         raise ValueError("Unknown role: {}".format(role))
-    lbs_req.key = '6b1865d1da1f438d974ba72de4cb1ddd'
+    if staging_env:
+        lbs_req.key = '6b1865d1da1f438d974ba72de4cb1ddd'
+    else:
+        lbs_req.key = 'f4637604af81440596a54254d53ade20'
     lbs_req.cname = RandomString()
     lbs_req.uid = RandomNumber32()
     lbs_req.detail = {}
@@ -266,6 +269,7 @@ def read_ap_proxy_res(res: GenericResponse):
         if edge_ip is None or edge.port is None:
             continue
         res.append({"ip": edge_ip, "port": edge.port})
+    logging.info("ap return cp: {}".format(res))
     return res
 
 # tcp proxy: uri to packet types map

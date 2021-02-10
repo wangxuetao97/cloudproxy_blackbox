@@ -1,3 +1,4 @@
+#!/usr/bin/python3
 from datetime import timedelta
 
 from client.test_tcp import TestTcp
@@ -122,7 +123,7 @@ def main():
         else:
             aip = nslookup(ap_host)
             logging.info("Fetch proxy addr from ap: {}:{}".format(aip, aport))
-            addrs = ap_fetch_cp(blackbox_role, aip, aport)
+            addrs = ap_fetch_cp(blackbox_role, aip, aport, config_json.get("staging_env", False))
             if len(addrs) == 0:
                 err_info = "Ap fetch cloudproxy edge failed."
                 logging.warning(err_info)
@@ -162,7 +163,7 @@ def main():
                 thread_close_event.clear()
             if len(jobs) == 0:
                 logging.error("All ap address is invalid or \
-no proxy address can be found, no task available.")
+no proxy address can be found, so no task is available.")
                 sys.exit(1)
             time.sleep(1)
     except ProgramKilled:

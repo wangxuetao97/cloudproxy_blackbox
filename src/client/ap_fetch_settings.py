@@ -4,8 +4,8 @@ import packet.packet_types as pt
 import packet.packer as pk
 from bitstring import BitStream, pack
 
-def ap_fetch_cp(role, ap_ip, ap_port):
-    req = pt.make_ap_proxy_req(role)
+def ap_fetch_cp(role, ap_ip, ap_port, staging_env):
+    req = pt.make_ap_proxy_req(role, staging_env)
     ptr = ProxyTcpRequest()
     ptr.connect(ap_ip, ap_port)
     ptr.set_packet(req)

@@ -12,6 +12,7 @@ from typing import List
 import logging
 import json
 import platform
+import re
 import threading
 import traceback
 
@@ -19,7 +20,8 @@ from base.voc_agent import VocAgent
 from base.statistic import Statistics
 from client.quality_collector import Collectors
 from packet.packer import get_packet_size, get_serv_uri, unpack
-from packet.packet_types import Packet, service_type_map
+from packet.packet_types import Packet, service_type_map, voc_uri_packet,\
+        VOC_SERVTYPE, read_ap_proxy_res
 
 CLOUDPROXY_LOCAL_IP_FILE = "/data/log/agora/cloudproxy_local_ip.log"
 if platform.system() == 'Windows':
@@ -87,7 +89,7 @@ def agolet_report(content):
     }
     url = "http://agolet.agoralab.co/v1/agobot/message"
     try:
-        # logging.warning("agolet report: {}".format(data))
+        logging.warning("agolet report: {}".format(data))
         post(url, data)
     except Exception as e:
         err_info = "Failed in agolet report: {}".format(e)
@@ -230,6 +232,10 @@ class TestBase:
     def agolet_ap_fail_msg(self, ap_ip) -> str:
         return "Ap failed on {0} from cloudproxy {1}"\
                 .format(ap_ip, self.local_ip)
+    
+    def agolet_ap_cp_addr_regex_not_match(self, ap_ip, cp_ip, regex) -> str:
+        return "Ap return bad cloudproxy address not matching regex, ap: {}, cp: {}, regex:{}, from: {}"\
+                .format(ap_ip, cp_ip, regex, self.local_ip)
 
     # TODO now TCP channel only
     PING_INTERVAL = 5
@@ -336,3 +342,25 @@ class TestBase:
             err_info = "influxdb write error: {}".format(traceback.format_exc())
             logging.warning(err_info)
         
+    def check_ap_payload(self, payload_bytes):
+        serv, uri = get_serv_uri(payload_bytes)
+        if serv != VOC_SERVTYPE or uri != 75:
+            self.record_err(TestError.AP_ERROR)
+            return 0
+        apk = unpack(BitStream(payload_bytes), voc_uri_packet[uri])
+        if apk is None:
+            self.record_err(TestError.UDP_PAYLOAD_CORRUPTED)
+            return -1
+        addrs = read_ap_proxy_res(apk)
+        if not self.configs.get("ignore_ap_has_no_cp", False) \
+                and (addrs is None or len(addrs)) == 0:
+            self.record_err(TestError.AP_ERROR)
+        if addrs is not None and len(addrs) > 0 \
+                and self.configs.get("enable_ap_cp_addr_regex", False):
+            regex = self.configs.get("ap_cp_addr_regex", "")
+            ip_addr = addrs[0].get("ip", "")
+            if re.search(regex, ip_addr) == None:
+                agolet_report(self.agolet_ap_cp_addr_regex_not_match(self.ap_ip, ip_addr, regex))
+                logging.error("Ap return addr regex not match, regex: {}, ip: {}".format(regex, ip_addr))
+                self.record_err(TestError.AP_ERROR)
+        return 0

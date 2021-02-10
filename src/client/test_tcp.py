@@ -93,7 +93,7 @@ class TestTcp(TestBase):
                         continue
                     self.req.make_packet(8)
                     self.req.packet.link_id = self.tcp_link_ids[-1]
-                    self.last_payload = make_ap_proxy_req(self.role)
+                    self.last_payload = make_ap_proxy_req(self.role, self.configs.get("staging_env", False))
                     self.req.packet.payload = pack(self.last_payload)
                 elif self.step.action == TestAction.CPAPTESTUDP:
                     if len(self.udp_link_ids) == 0:
@@ -103,7 +103,7 @@ class TestTcp(TestBase):
                     self.req.packet.ip = int.from_bytes(inet_pton(AF_INET, self.ap_ip), 'big')
                     self.req.packet.port = self.ap_udp_port
                     self.req.packet.link_id = self.udp_link_ids[-1]
-                    self.last_payload = make_ap_proxy_req(self.role)
+                    self.last_payload = make_ap_proxy_req(self.role, self.configs.get("staging_env", False))
                     self.req.packet.payload = pack(self.last_payload)
                 elif self.step.action == TestAction.CPRELEASETCP:
                     if len(self.tcp_link_ids) == 0:
@@ -324,19 +324,4 @@ class TestTcp(TestBase):
         else:
             # handle invalid uri
             self.record_err(TestError.WRONG_URI_RETURN)
-        return 0
-
-    def check_ap_payload(self, payload_bytes):
-        pay_service_id, pay_uri = get_serv_uri(payload_bytes)
-        if pay_service_id != VOC_SERVTYPE or pay_uri != 75:
-            self.record_err(TestError.AP_ERROR)
-            return 0
-        payload_packet = unpack(BitStream(payload_bytes), voc_uri_packet[pay_uri])
-        if payload_packet is None:
-            self.record_err(TestError.TCP_PAYLOAD_CORRUPTED)
-            return -1
-        addrs = read_ap_proxy_res(payload_packet)
-        if not self.configs.get("ignore_ap_has_no_cp", False) \
-                and (addrs is None or len(addrs)) == 0:
-            self.record_err(TestError.AP_ERROR)
         return 0

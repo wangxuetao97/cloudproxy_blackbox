@@ -3,6 +3,7 @@ from datetime import datetime
 from socket import inet_ntop, socket, AF_INET, SOCK_DGRAM
 
 import logging
+import re
 import traceback
 import time
 
@@ -83,7 +84,7 @@ class TestUdp(TestBase):
                     if self.link_id is None:
                         logging.warning("Skip ap test because no link id.")
                         continue
-                    self.last_payload = make_ap_proxy_req(self.role)
+                    self.last_payload = make_ap_proxy_req(self.role, self.configs.get("staging_env", False))
                     self.req.set_packet(self.last_payload)
                     self.req.set_header(self.link_id, self.ap_ip, self.ap_port)
                 elif self.step.action == TestAction.CPQUIT:
@@ -133,7 +134,7 @@ class TestUdp(TestBase):
         try:
             ap_socket = socket(AF_INET, SOCK_DGRAM)
             ap_socket.settimeout(5)
-            ap_socket.sendto(pack(make_ap_proxy_req(self.role)),\
+            ap_socket.sendto(pack(make_ap_proxy_req(self.role, self.configs.get("staging_env", False))),\
                     (self.ap_ip, self.ap_port))
             ap_socket.recv(4096)
         except:
@@ -213,22 +214,3 @@ class TestUdp(TestBase):
                     self.record_err(TestError.PACKET_CORRUPTED)
                     return -1
         return 0
-        
-    def check_ap_payload(self, payload_bytes):
-        serv, uri = get_serv_uri(payload_bytes)
-        if serv != VOC_SERVTYPE or uri != 75:
-            self.record_err(TestError.AP_ERROR)
-            return 0
-        apk = unpack(BitStream(payload_bytes), voc_uri_packet[uri])
-        if apk is None:
-            self.record_err(TestError.UDP_PAYLOAD_CORRUPTED)
-            return -1
-        addrs = read_ap_proxy_res(apk)
-        if not self.configs.get("ignore_ap_has_no_cp", False) \
-                and (addrs is None or len(addrs)) == 0:
-            self.record_err(TestError.AP_ERROR)
-        return 0
-
-
-                
-            
