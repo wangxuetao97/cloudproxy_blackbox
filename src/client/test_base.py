@@ -233,7 +233,7 @@ class TestBase:
         return "Ap failed on {0} from cloudproxy {1}"\
                 .format(ap_ip, self.local_ip)
     
-    def agolet_ap_cp_addr_regex_not_match(self, ap_ip, cp_ip, regex) -> str:
+    def agolet_ap_cp_addr_regex_not_match(self, ap_ip, cp_addrs, regex) -> str:
         return "Ap return bad cloudproxy address not matching regex, ap: {}, cp: {}, regex:{}, from: {}"\
                 .format(ap_ip, cp_ip, regex, self.local_ip)
 
@@ -358,9 +358,12 @@ class TestBase:
         if addrs is not None and len(addrs) > 0 \
                 and self.configs.get("enable_ap_cp_addr_regex", False):
             regex = self.configs.get("ap_cp_addr_regex", "")
-            ip_addr = addrs[0].get("ip", "")
-            if re.search(regex, ip_addr) == None:
-                agolet_report(self.agolet_ap_cp_addr_regex_not_match(self.ap_ip, ip_addr, regex))
+            for addr_entry in addrs:
+                ip_addr = addr_entry.get("ip", "")
+                if re.search(regex, ip_addr) != None:
+                    break
+            else:
+                agolet_report(self.agolet_ap_cp_addr_regex_not_match(self.ap_ip, addrs, regex))
                 logging.error("Ap return addr regex not match, regex: {}, ip: {}".format(regex, ip_addr))
                 self.record_err(TestError.AP_ERROR)
         return 0
