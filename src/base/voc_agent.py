@@ -45,7 +45,7 @@ class VocAgent:
             c.send_data(data)
             res = c.recv_short_data()
             if res is not None:
-                logging.info("get join voc reply, code: {} with idc {}".format(res.code, res.config['idc']))
+                logging.info("get join voc reply, code: {} with idc {}".format(res.code, res.config.get('idc', 'unknown')))
                 return res
         return None
 

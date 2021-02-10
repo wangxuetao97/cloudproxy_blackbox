@@ -188,7 +188,7 @@ class TestBase:
             exit(0)
         voc_res = voc_join('/cloudproxy_blackbox_{}'.format(self.role))
         if voc_res is not None:
-            self.idc = voc_res.config['idc']
+            self.idc = voc_res.config.get('idc', 'unknown')
         else:
             self.idc = None
         self.test_plan: List[TestStep] = []
