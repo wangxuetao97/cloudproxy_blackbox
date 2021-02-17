@@ -235,7 +235,7 @@ class TestBase:
     
     def agolet_ap_cp_addr_regex_not_match(self, ap_ip, cp_addrs, regex) -> str:
         return "Ap return bad cloudproxy address not matching regex, ap: {}, cp: {}, regex:{}, from: {}"\
-                .format(ap_ip, cp_ip, regex, self.local_ip)
+                .format(ap_ip, cp_addrs, regex, self.local_ip)
 
     # TODO now TCP channel only
     PING_INTERVAL = 5
