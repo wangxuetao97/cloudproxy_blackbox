@@ -88,6 +88,9 @@ class TestUdp(TestBase):
                     self.req.set_packet(self.last_payload)
                     self.req.set_header(self.link_id, self.ap_ip, self.ap_port)
                 elif self.step.action == TestAction.CPQUIT:
+                    if self.link_id is None:
+                        logging.warning("Skip ap test because no link id.")
+                        continue
                     self.req.make_packet(6)
                     self.req.set_header(self.link_id, '127.0.0.1', 1)
                 else:
@@ -210,6 +213,7 @@ class TestUdp(TestBase):
                     packet = unpack(BitStream(packet_bytes), udp_proxy_uri_packets[3])
                     logging.warning("Udp connection get reset.")
                     self.link_id = None
+                    return -1
                 else:
                     self.record_err(TestError.PACKET_CORRUPTED)
                     return -1

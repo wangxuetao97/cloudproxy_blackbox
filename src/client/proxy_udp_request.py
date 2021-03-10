@@ -46,6 +46,7 @@ class ProxyUdpRequest:
         self._header_bytes = _conn_id + _ip_bytes + _port_bytes
 
     def pack(self):
+        logging.info("udp header: {}".format(self._header_bytes))
         self._data = self._header_bytes + pack(self._packet)
 
     def send(self):

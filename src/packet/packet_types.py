@@ -252,7 +252,10 @@ def read_ap_proxy_res(res: GenericResponse):
     from packet.packer import unpack
     from socket import inet_ntop, ntohs, AF_INET
     if res.service_type != 0 or res.uri != 75:
-        logging.warning("ap proxy return error: {}".format(res.__dict__))
+        logging.warning("ap proxy return error header: {}".format(res.__dict__))
+        return None
+    if res.code != 0:
+        logging.warning("ap proxy return error code: {}".format(res.code))
         return None
     ib:InnerBody = res.response_body
     if ib.uri != 2:
