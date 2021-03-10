@@ -41,6 +41,12 @@ function remove {
     fi
 }
 
+function rmlog {
+    echo '' | sudo tee '/data/log/agora/cloudproxy_blackbox_tcp.log'
+    echo '' | sudo tee '/data/log/agora/cloudproxy_blackbox_tls.log'
+    echo '' | sudo tee '/data/log/agora/cloudproxy_blackbox_udp.log'
+}
+
 if [[ $# -eq 0 ]]; then
     build
     stop
@@ -56,4 +62,8 @@ elif [[ $1 == stop ]]; then
     stop
 elif [[ $1 == remove ]]; then
     remove
+elif [[ $1 == rmlog ]]; then
+    rmlog
+else
+    echo "Nothing to do, exit now."
 fi
