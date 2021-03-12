@@ -353,7 +353,7 @@ class TestBase:
             return -1
         addrs = read_ap_proxy_res(apk)
         if not self.configs.get("ignore_ap_has_no_cp", False) \
-                and (addrs is None or len(addrs)) == 0:
+                and (addrs is None or len(addrs) == 0):
             self.record_err(TestError.AP_ERROR)
         if addrs is not None and len(addrs) > 0 \
                 and self.configs.get("enable_ap_cp_addr_regex", False):
