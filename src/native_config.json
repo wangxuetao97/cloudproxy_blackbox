@@ -6,8 +6,8 @@
     "use_dns_ap": true,
     "use_dns_ap_on_every_test": true,
     "ignore_ap_has_no_cp": false,
-    "ignore_ap_fail": true,
+    "ignore_ap_fail": false,
     "staging_env": false,
-    "enable_ap_cp_addr_regex": true,
+    "enable_ap_cp_addr_regex": false,
     "ap_cp_addr_regex": "^148.153.*"
 }
